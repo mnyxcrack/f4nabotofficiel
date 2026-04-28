@@ -1,0 +1,14 @@
+{
+  "name": "bot-hebergeur",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "discord.js": "^14.26.3",
+    "gradient-string": "^2.0.2",
+    "ora": "^8.0.1"
+  }
+}

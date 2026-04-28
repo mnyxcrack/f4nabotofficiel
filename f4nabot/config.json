@@ -1,0 +1,15 @@
+{
+  "token": "MTQ5Njk5MzQwOTk0MzIxMjEwMw.GpgYXy.MGoB4fLUeVmyEgYJFLzG9cNsIhWaO8DNnnjqAo",
+  "clientId": "1496993409943212103",
+  "roleId": "1497014445287673857",
+  "welcomeChannelId": "1498585747958005830",
+  "logChannelId": "1498596714851078236",
+  "minAccountAgeDays": 3,
+  "roleBypass": "1497014445287673857",
+  "raidMaxJoins": 5,
+  "raidInterval": 10000,
+  "muteRoleId": "1498600103123095693",
+  "sanctionThreshold": 3
+
+}
+
