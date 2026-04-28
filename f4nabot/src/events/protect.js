@@ -4,58 +4,78 @@ const spamMap = new Map();
 const userInfractions = new Map();
 
 //
-// 🔒 MUTE SIMPLE (RAPIDE)
+// 🔒 MUTE (simple + fiable)
 //
 async function applyMute(member) {
     const role = member.guild.roles.cache.get(config.muteRoleId);
     if (!role) return;
 
-    await member.roles.add(role).catch(() => {});
+    if (!member.roles.cache.has(role.id)) {
+        await member.roles.add(role).catch(() => {});
+    }
 }
 
 //
-// 🧹 SUPPRIMER SPAM
+// 🧹 SUPPRIMER SPAM (plus clean)
 //
 async function deleteRecentMessages(channel, member) {
-    const messages = await channel.messages.fetch({ limit: 20 });
+    const messages = await channel.messages.fetch({ limit: 15 });
     const userMessages = messages.filter(m => m.author.id === member.id);
 
-    channel.bulkDelete(userMessages, true).catch(() => {});
+    if (userMessages.size > 1) {
+        channel.bulkDelete(userMessages, true).catch(() => {});
+    }
 }
 
 //
-// ⚖️ SANCTIONS
+// ⚖️ SANCTIONS (corrigé)
 //
 async function handleSanction(member, logChannel, reason) {
 
-    const infractions = (userInfractions.get(member.id) || 0) + 1;
+    let infractions = userInfractions.get(member.id) || 0;
+    infractions++;
     userInfractions.set(member.id, infractions);
 
-    // DM
+    // 📩 MESSAGE PRIVÉ
     await member.send({
         embeds: [{
             color: 0xff0000,
-            title: "Avertissement",
-            description: `Raison : ${reason}\nInfractions : ${infractions}/3`
+            title: "⚠️ Avertissement",
+            description:
+                `Raison : **${reason}**\n` +
+                `Infractions : **${infractions}/3**\n\n` +
+                `Merci de respecter le serveur.`
         }]
     }).catch(() => {});
 
-    // MUTE
+    // 🔇 MUTE au 3ème
     if (infractions === 3) {
         await applyMute(member);
+
+        await member.send({
+            embeds: [{
+                color: 0xff0000,
+                title: "🔇 Sanction",
+                description: "Tu as été **mute** suite à plusieurs infractions."
+            }]
+        }).catch(() => {});
     }
 
-    // KICK
-    if (infractions >= 4) {
-        await member.kick().catch(() => {});
+    // 🚫 KICK seulement après 5 infractions (moins abusé)
+    if (infractions >= 5) {
+        await member.kick("Trop d'infractions").catch(() => {});
     }
 
-    // LOG
+    // 📊 LOG PROPRE
     logChannel?.send({
         embeds: [{
             color: 0xff0000,
-            title: "LOG • Sanction",
-            description: `${member.user.tag} | ${reason} | ${infractions}`,
+            title: "📊 LOG • Protection",
+            fields: [
+                { name: "Utilisateur", value: `${member.user.tag}`, inline: true },
+                { name: "Raison", value: reason, inline: true },
+                { name: "Infractions", value: `${infractions}`, inline: true }
+            ],
             timestamp: new Date()
         }]
     });
@@ -74,7 +94,7 @@ module.exports = {
 
         const logChannel = message.guild.channels.cache.get(config.logChannelId);
 
-        // 🔥 BLOQUE DIRECT SI MUTE (ULTRA IMPORTANT)
+        // 🔒 BLOQUE SI MUTE (important)
         if (member.roles.cache.has(config.muteRoleId)) {
             await message.delete().catch(() => {});
             return;
@@ -88,7 +108,7 @@ module.exports = {
 
         if (/(https?:\/\/|discord\.gg)/gi.test(content)) {
             await message.delete().catch(() => {});
-            await handleSanction(member, logChannel, "Lien");
+            await handleSanction(member, logChannel, "Lien interdit");
             return;
         }
 
@@ -103,49 +123,60 @@ module.exports = {
         }
 
         // ==========================
-        // CAPS
+        // CAPS (moins strict)
         // ==========================
 
-        if (message.content.length > 12 && message.content === message.content.toUpperCase()) {
+        const isCaps =
+            message.content.length > 15 &&
+            message.content === message.content.toUpperCase();
+
+        if (isCaps) {
             await message.delete().catch(() => {});
-            await handleSanction(member, logChannel, "Caps");
+            await handleSanction(member, logChannel, "Majuscules abusives");
             return;
         }
 
         // ==========================
-        // DUPLICATE
+        // 💬 ANTI SPAM (équilibré)
         // ==========================
 
+        const now = Date.now();
+
         if (!spamMap.has(member.id)) {
-            spamMap.set(member.id, { last: content, count: 1, time: Date.now() });
+            spamMap.set(member.id, {
+                lastMessage: content,
+                count: 1,
+                lastTime: now
+            });
         } else {
             const data = spamMap.get(member.id);
 
-            if (data.last === content) {
+            // Spam répétitif
+            if (data.lastMessage === content) {
                 data.count++;
 
-                if (data.count >= 3) {
+                if (data.count >= 4) {
                     await message.delete().catch(() => {});
                     await handleSanction(member, logChannel, "Spam répétitif");
                     return;
                 }
             }
 
-            // SPAM RAPIDE
-            if (Date.now() - data.time < 5000) {
+            // Spam rapide
+            if (now - data.lastTime < 3000) {
                 data.count++;
 
-                if (data.count >= 5) {
+                if (data.count >= 6) {
                     await deleteRecentMessages(message.channel, member);
-                    await handleSanction(member, logChannel, "Spam");
+                    await handleSanction(member, logChannel, "Spam rapide");
                     return;
                 }
             } else {
                 data.count = 1;
             }
 
-            data.last = content;
-            data.time = Date.now();
+            data.lastMessage = content;
+            data.lastTime = now;
             spamMap.set(member.id, data);
         }
     }
