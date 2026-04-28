@@ -5,13 +5,10 @@ const fs = require('fs');
 const path = require('path');
 const ora = require('ora').default;
 
-// 🔐 Vérif TOKEN
-if (!process.env.TOKEN) {
-    console.error("❌ TOKEN manquant dans Railway !");
-    process.exit(1);
-}
+// ==========================
+// 🧠 CLIENT DISCORD
+// ==========================
 
-// 🧠 Client Discord
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -23,34 +20,45 @@ const client = new Client({
 
 client.commands = new Map();
 
-//
 // ==========================
 // 📦 CHARGEMENT COMMANDES
 // ==========================
-//
 
 const commandsPath = path.join(__dirname, 'commands');
 
-if (fs.existsSync(commandsPath)) {
+if (!fs.existsSync(commandsPath)) {
+    console.log("❌ Dossier /commands introuvable !");
+} else {
     const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
     for (const file of commandFiles) {
-        const command = require(`./commands/${file}`);
-        client.commands.set(command.data.name, command);
+        const filePath = path.join(commandsPath, file);
+
+        try {
+            const command = require(filePath);
+
+            // 🔒 Sécurité anti crash
+            if (!command.data || !command.data.name) {
+                console.log(`❌ Commande invalide: ${file}`);
+                continue;
+            }
+
+            client.commands.set(command.data.name, command);
+
+        } catch (err) {
+            console.log(`❌ Erreur chargement commande ${file}`);
+            console.error(err);
+        }
     }
 
     logger.success(`${client.commands.size} commandes chargées`);
-} else {
-    logger.warn("⚠️ Aucun dossier commands trouvé");
 }
 
-//
 // ==========================
 // 📡 ENREGISTREMENT COMMANDES
 // ==========================
-//
 
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN || config.token);
 
 (async () => {
     const spinner = ora('Chargement des commandes...').start();
@@ -66,41 +74,48 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
         spinner.succeed('Commandes chargées !');
     } catch (err) {
         spinner.fail('Erreur chargement commandes');
-        logger.error(err);
+        console.error(err);
     }
 })();
 
-//
 // ==========================
-// ⚡ CHARGEMENT EVENTS
+// 📡 CHARGEMENT EVENTS
 // ==========================
-//
 
 const eventsPath = path.join(__dirname, 'events');
 
-if (fs.existsSync(eventsPath)) {
+if (!fs.existsSync(eventsPath)) {
+    console.log("❌ Dossier /events introuvable !");
+} else {
     const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
     for (const file of eventFiles) {
-        const event = require(`./events/${file}`);
+        const filePath = path.join(eventsPath, file);
 
-        if (event.once) {
-            client.once(event.name, (...args) => event.execute(...args, client));
-        } else {
-            client.on(event.name, (...args) => event.execute(...args, client));
+        try {
+            const event = require(filePath);
+
+            if (!event.name || !event.execute) {
+                console.log(`❌ Event invalide: ${file}`);
+                continue;
+            }
+
+            if (event.once) {
+                client.once(event.name, (...args) => event.execute(...args, client));
+            } else {
+                client.on(event.name, (...args) => event.execute(...args, client));
+            }
+
+        } catch (err) {
+            console.log(`❌ Erreur chargement event ${file}`);
+            console.error(err);
         }
     }
-
-    logger.success(`${eventFiles.length} events chargés`);
-} else {
-    logger.warn("⚠️ Aucun dossier events trouvé");
 }
 
-//
 // ==========================
 // 🎯 INTERACTIONS COMMANDES
 // ==========================
-//
 
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
@@ -123,7 +138,7 @@ client.on('interactionCreate', async interaction => {
     try {
         await command.execute(interaction);
     } catch (error) {
-        logger.error(error);
+        console.error(error);
 
         if (!interaction.replied) {
             interaction.reply({
@@ -134,34 +149,20 @@ client.on('interactionCreate', async interaction => {
     }
 });
 
-//
 // ==========================
 // 🚨 ERREURS GLOBALES
 // ==========================
-//
 
 process.on('unhandledRejection', err => {
-    logger.error(`UnhandledRejection: ${err}`);
+    console.error('UnhandledRejection:', err);
 });
 
 process.on('uncaughtException', err => {
-    logger.error(`UncaughtException: ${err}`);
+    console.error('UncaughtException:', err);
 });
 
-//
-// ==========================
-// 🔌 READY
-// ==========================
-//
-
-client.once('ready', () => {
-    logger.success(`🤖 Connecté en tant que ${client.user.tag}`);
-});
-
-//
 // ==========================
 // 🔌 CONNEXION
 // ==========================
-//
 
-client.login(process.env.TOKEN);
+client.login(process.env.TOKEN || config.token);
