@@ -9,7 +9,8 @@
   "raidMaxJoins": 5,
   "raidInterval": 10000,
   "muteRoleId": "1498600103123095693",
-  "sanctionThreshold": 3
+  "sanctionThreshold": 3,
+  "reglementRoleId": "1496955671852351528"
 
 }
 
