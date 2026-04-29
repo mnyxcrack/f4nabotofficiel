@@ -3,7 +3,7 @@ const config = require('../config.json');
 const logger = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
-const ora = require('ora').default; // ✅ FIX ora
+const ora = require('ora').default;
 
 // 🧠 Client Discord
 const client = new Client({
@@ -14,6 +14,7 @@ const client = new Client({
         GatewayIntentBits.MessageContent
     ]
 });
+
 client.commands = new Map();
 
 //
@@ -27,6 +28,13 @@ const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('
 
 for (const file of commandFiles) {
     const command = require(`./commands/${file}`);
+
+    // 🔒 sécurité anti crash
+    if (!command.data || !command.data.name) {
+        console.log(`❌ Commande invalide: ${file}`);
+        continue;
+    }
+
     client.commands.set(command.data.name, command);
 }
 
@@ -38,20 +46,21 @@ logger.success(`${client.commands.size} commandes chargées`);
 // ==========================
 //
 
-const rest = new REST({ version: '10' }).setToken(config.token);
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN); // 🔥 FIX TOKEN
 
 (async () => {
     const spinner = ora('Chargement des commandes...').start();
 
     try {
-        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON()); // ✅ FIX Map
+        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
+        // 🔥 FIX IMPORTANT → commandes instant
         await rest.put(
-            Routes.applicationCommands(config.clientId),
+            Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: commands }
         );
 
-        spinner.succeed('Commandes chargées !');
+        spinner.succeed('Commandes chargées instant !');
     } catch (err) {
         spinner.fail('Erreur chargement commandes');
         logger.error(err);
@@ -84,33 +93,34 @@ for (const file of eventFiles) {
 //
 
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
 
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
+    if (interaction.isChatInputCommand()) {
+        const command = client.commands.get(interaction.commandName);
+        if (!command) return;
 
-    const member = interaction.member;
+        const member = interaction.member;
 
-    // 🔐 Vérification rôle
-    if (command.permission) {
-        if (!member.roles.cache.has(config.roleId)) {
-            return interaction.reply({
-                content: "❌ Tu n'as pas la permission.",
-                ephemeral: true
-            });
+        // 🔐 Vérification rôle
+        if (command.permission) {
+            if (!member.roles.cache.has(config.roleId)) {
+                return interaction.reply({
+                    content: "❌ Tu n'as pas la permission.",
+                    ephemeral: true
+                });
+            }
         }
-    }
 
-    try {
-        await command.execute(interaction);
-    } catch (error) {
-        logger.error(error);
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            logger.error(error);
 
-        if (!interaction.replied) {
-            interaction.reply({
-                content: "❌ Une erreur est survenue.",
-                ephemeral: true
-            });
+            if (!interaction.replied) {
+                interaction.reply({
+                    content: "❌ Une erreur est survenue.",
+                    ephemeral: true
+                });
+            }
         }
     }
 });
@@ -131,8 +141,18 @@ process.on('uncaughtException', err => {
 
 //
 // ==========================
+// 🔌 READY
+// ==========================
+//
+
+client.once('ready', () => {
+    logger.success(`Connecté en tant que ${client.user.tag}`);
+});
+
+//
+// ==========================
 // 🔌 CONNEXION
 // ==========================
 //
 
-client.login(config.token);
+client.login(process.env.TOKEN); // 🔥 FIX TOKEN
