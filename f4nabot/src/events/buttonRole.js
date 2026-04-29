@@ -11,16 +11,41 @@ module.exports = {
         if (reaction.partial) await reaction.fetch();
         if (reaction.message.partial) await reaction.message.fetch();
 
-        // 🔥 TON EMOJI
-        if (reaction.emoji.name !== "3dgifmaker67250") return;
+        // 🔥 TON EMOJI (nom OU ID)
+        if (reaction.emoji.name !== "3dgifmaker67250" && reaction.emoji.id !== "123456789012345678") return;
 
         const member = await reaction.message.guild.members.fetch(user.id);
         const role = reaction.message.guild.roles.cache.get(config.reglementRoleId);
 
         if (!role) return;
-
         if (member.roles.cache.has(role.id)) return;
 
         await member.roles.add(role).catch(() => {});
+    }
+};
+
+// ==========================
+// ❌ REMOVE ROLE
+// ==========================
+
+module.exports.remove = {
+    name: 'messageReactionRemove',
+
+    async execute(reaction, user) {
+
+        if (user.bot) return;
+
+        if (reaction.partial) await reaction.fetch();
+        if (reaction.message.partial) await reaction.message.fetch();
+
+        if (reaction.emoji.name !== "3dgifmaker67250" && reaction.emoji.id !== "123456789012345678") return;
+
+        const member = await reaction.message.guild.members.fetch(user.id);
+        const role = reaction.message.guild.roles.cache.get(config.reglementRoleId);
+
+        if (!role) return;
+        if (!member.roles.cache.has(role.id)) return;
+
+        await member.roles.remove(role).catch(() => {});
     }
 };
