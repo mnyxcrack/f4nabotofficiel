@@ -8,7 +8,10 @@ module.exports = {
 
     async execute(interaction) {
 
-        // 🔥 charge image
+        // 🔥 ID de ton emoji
+        const emoji = "<:3dgifmaker67250:123456789012345678>"; 
+        // ⚠️ remplace par TON ID
+
         const file = new AttachmentBuilder(
             path.join(__dirname, '../../img/bannier.png')
         );
@@ -38,17 +41,17 @@ module.exports = {
                 "Sanctions\n" +
                 "Avertissement, mute, kick ou bannissement.\n\n" +
 
-                "Réagis avec l’emoji ci-dessous pour accepter."
+                `Clique sur ${emoji} pour accepter le règlement.`
             )
-            .setImage('attachment://bannier.png'); // 🔥 IMPORTANT
+            .setImage('attachment://bannier.png');
 
         const msg = await interaction.reply({
             embeds: [embed],
-            files: [file], // 🔥 OBLIGATOIRE
+            files: [file],
             fetchReply: true
         });
 
-        // 🔥 MET TON ID ICI
-        await msg.react("1497090036708151346");
+        // 🔥 REACTION AVEC ID
+        await msg.react("123456789012345678"); // même ID que l'emoji
     }
 };
