@@ -37,7 +37,6 @@ if (!fs.existsSync(commandsPath)) {
         try {
             const command = require(filePath);
 
-            // 🔒 Sécurité anti crash
             if (!command.data || !command.data.name) {
                 console.log(`❌ Commande invalide: ${file}`);
                 continue;
@@ -55,10 +54,10 @@ if (!fs.existsSync(commandsPath)) {
 }
 
 // ==========================
-// 📡 ENREGISTREMENT COMMANDES
+// 📡 ENREGISTREMENT COMMANDES (FIX IMPORTANT)
 // ==========================
 
-const rest = new REST({ version: '10' }).setToken(process.env.TOKEN || config.token);
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN);
 
 (async () => {
     const spinner = ora('Chargement des commandes...').start();
@@ -66,12 +65,13 @@ const rest = new REST({ version: '10' }).setToken(process.env.TOKEN || config.to
     try {
         const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
+        // 🔥 ICI LA CORRECTION
         await rest.put(
-            Routes.applicationCommands(config.clientId),
+            Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: commands }
         );
 
-        spinner.succeed('Commandes chargées !');
+        spinner.succeed('Commandes chargées INSTANT !');
     } catch (err) {
         spinner.fail('Erreur chargement commandes');
         console.error(err);
@@ -125,7 +125,6 @@ client.on('interactionCreate', async interaction => {
 
     const member = interaction.member;
 
-    // 🔐 Vérification rôle
     if (command.permission) {
         if (!member.roles.cache.has(config.roleId)) {
             return interaction.reply({
@@ -150,19 +149,15 @@ client.on('interactionCreate', async interaction => {
 });
 
 // ==========================
-// 🚨 ERREURS GLOBALES
+// 🔌 READY
 // ==========================
 
-process.on('unhandledRejection', err => {
-    console.error('UnhandledRejection:', err);
-});
-
-process.on('uncaughtException', err => {
-    console.error('UncaughtException:', err);
+client.once('ready', () => {
+    console.log(`✅ Connecté en tant que ${client.user.tag}`);
 });
 
 // ==========================
 // 🔌 CONNEXION
 // ==========================
 
-client.login(process.env.TOKEN || config.token);
+client.login(process.env.TOKEN);
