@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -8,34 +8,39 @@ module.exports = {
     async execute(interaction) {
 
         const embed = new EmbedBuilder()
-            .setColor(0x5865F2) // 🔥 couleur discord propre
-            .setTitle("📜 • Règlement du serveur")
+            .setColor(0x2b2d31)
+            .setTitle("Règlement du serveur")
             .setDescription(
-                "Bienvenue 👋\n\n" +
-                "Merci de lire attentivement le règlement avant d'accéder au serveur.\n\n" +
-                "```" +
-                "• Respect des membres\n" +
-                "• Pas de spam\n" +
-                "• Pas de publicité\n" +
-                "• Pas de contenu interdit\n" +
-                "```\n" +
-                "👉 Clique sur le bouton ci-dessous pour accepter."
-            )
-            .setFooter({ text: "F4na • Vérification" })
-            .setTimestamp();
+                "Respect des membres\n" +
+                "Le respect est obligatoire envers tous les membres.\n\n" +
 
-        const button = new ButtonBuilder()
-            .setCustomId('accept_reglement')
-            .setLabel('Accepter')
-            .setEmoji('✅')
-            .setStyle(ButtonStyle.Success);
+                "Pas de spam\n" +
+                "Le spam est interdit sous toutes ses formes.\n\n" +
 
-        const row = new ActionRowBuilder().addComponents(button);
+                "Pas de publicité\n" +
+                "Toute publicité est interdite sans autorisation.\n\n" +
 
-        await interaction.reply({
+                "Contenu interdit\n" +
+                "NSFW, contenu illégal ou dangereux interdit.\n\n" +
+
+                "Respect des salons\n" +
+                "Utilise les salons correctement.\n\n" +
+
+                "Respect du staff\n" +
+                "Les décisions du staff doivent être respectées.\n\n" +
+
+                "Sanctions\n" +
+                "Avertissement, mute, kick ou bannissement.\n\n" +
+
+                "Réagis avec l’emoji ci-dessous pour accepter."
+            );
+
+        const msg = await interaction.reply({
             embeds: [embed],
-            components: [row],
-            ephemeral: false // 🔥 visible pour tout le monde
+            fetchReply: true
         });
+
+        // 🔥 remplace par TON emoji custom
+        await msg.react("3dgifmaker67250"); 
     }
 };
