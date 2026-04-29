@@ -49,6 +49,6 @@ module.exports = {
         });
 
         // 🔥 MET TON ID ICI
-        await msg.react("123456789012345678");
+        await msg.react("1497090036708151346");
     }
 };
