@@ -9,7 +9,7 @@ module.exports = {
     async execute(interaction) {
 
         // 🔥 ID de ton emoji
-        const emoji = "<:3dgifmaker67250:123456789012345678>"; 
+        const emoji = "<:3dgifmaker67250:1497090036708151346>"; 
         // ⚠️ remplace par TON ID
 
         const file = new AttachmentBuilder(
@@ -52,6 +52,6 @@ module.exports = {
         });
 
         // 🔥 REACTION AVEC ID
-        await msg.react("123456789012345678"); // même ID que l'emoji
+        await msg.react("1497090036708151346"); // même ID que l'emoji
     }
 };
