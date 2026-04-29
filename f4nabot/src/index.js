@@ -5,17 +5,6 @@ const fs = require('fs');
 const path = require('path');
 const ora = require('ora').default;
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
-        GatewayIntentBits.GuildMessageReactions // 🔥 OBLIGATOIRE
-    ],
-    partials: ['MESSAGE', 'CHANNEL', 'REACTION'] // 🔥 OBLIGATOIRE
-});
-
 // ==========================
 // 🧠 CLIENT DISCORD
 // ==========================
@@ -25,8 +14,10 @@ const client = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions // 🔥 OBLIGATOIRE
+    ],
+    partials: ['MESSAGE', 'CHANNEL', 'REACTION'] // 🔥 OBLIGATOIRE
 });
 
 client.commands = new Map();
