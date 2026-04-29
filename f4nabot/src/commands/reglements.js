@@ -1,4 +1,5 @@
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, AttachmentBuilder } = require('discord.js');
+const path = require('path');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -6,6 +7,11 @@ module.exports = {
         .setDescription('Afficher le règlement du serveur'),
 
     async execute(interaction) {
+
+        // 🔥 charge image
+        const file = new AttachmentBuilder(
+            path.join(__dirname, '../../img/bannier.png')
+        );
 
         const embed = new EmbedBuilder()
             .setColor(0x2b2d31)
@@ -33,14 +39,16 @@ module.exports = {
                 "Avertissement, mute, kick ou bannissement.\n\n" +
 
                 "Réagis avec l’emoji ci-dessous pour accepter."
-            );
+            )
+            .setImage('attachment://bannier.png'); // 🔥 IMPORTANT
 
         const msg = await interaction.reply({
             embeds: [embed],
+            files: [file], // 🔥 OBLIGATOIRE
             fetchReply: true
         });
 
-        // 🔥 remplace par TON emoji custom
-        await msg.react("3dgifmaker67250"); 
+        // 🔥 MET TON ID ICI
+        await msg.react("123456789012345678");
     }
 };
