@@ -3,8 +3,8 @@ const path = require('path');
 
 module.exports = {
     data: new SlashCommandBuilder()
-        .setName('reglements')
-        .setDescription('Afficher le règlement du serveur'),
+        .setName('regle')
+        .setDescription('Afficher le règlement Automatique'),
 
     async execute(interaction) {
 
