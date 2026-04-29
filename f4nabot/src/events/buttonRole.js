@@ -1,3 +1,4 @@
+const config = require('../../config.json');
 
 module.exports = {
     name: 'interactionCreate',
@@ -8,7 +9,7 @@ module.exports = {
 
         if (interaction.customId === 'accept_reglement') {
 
-            const roleId = "1496955671852351528";
+            const roleId = config.reglementRoleId;
             const role = interaction.guild.roles.cache.get(roleId);
 
             if (!role) {
@@ -20,7 +21,7 @@ module.exports = {
 
             if (interaction.member.roles.cache.has(roleId)) {
                 return interaction.reply({
-                    content: "✅ Déjà validé",
+                    content: "✅ Tu as déjà accepté",
                     ephemeral: true
                 });
             }
@@ -28,7 +29,7 @@ module.exports = {
             await interaction.member.roles.add(role).catch(() => {});
 
             await interaction.reply({
-                content: "✅ Règlement accepté !",
+                content: "✅ Règlement accepté ! Accès donné 🔓",
                 ephemeral: true
             });
         }
