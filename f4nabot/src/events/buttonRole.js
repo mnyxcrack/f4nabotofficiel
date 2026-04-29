@@ -12,7 +12,7 @@ module.exports = {
         if (reaction.message.partial) await reaction.message.fetch();
 
         // 🔥 TON EMOJI (nom OU ID)
-        if (reaction.emoji.name !== "3dgifmaker67250" && reaction.emoji.id !== "123456789012345678") return;
+        if (reaction.emoji.name !== "3dgifmaker67250" && reaction.emoji.id !== "1497090036708151346") return;
 
         const member = await reaction.message.guild.members.fetch(user.id);
         const role = reaction.message.guild.roles.cache.get(config.reglementRoleId);
@@ -38,7 +38,7 @@ module.exports.remove = {
         if (reaction.partial) await reaction.fetch();
         if (reaction.message.partial) await reaction.message.fetch();
 
-        if (reaction.emoji.name !== "3dgifmaker67250" && reaction.emoji.id !== "123456789012345678") return;
+        if (reaction.emoji.name !== "3dgifmaker67250" && reaction.emoji.id !== "1497090036708151346") return;
 
         const member = await reaction.message.guild.members.fetch(user.id);
         const role = reaction.message.guild.roles.cache.get(config.reglementRoleId);
