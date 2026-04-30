@@ -6,7 +6,6 @@ module.exports = {
         .setDescription('Créer une annonce'),
 
     async execute(interaction) {
-
         const modal = new ModalBuilder()
             .setCustomId('annonceModal')
             .setTitle('Créer une annonce');
@@ -20,8 +19,7 @@ module.exports = {
         const sousTitre = new TextInputBuilder()
             .setCustomId('sousTitre')
             .setLabel('Sous-titre')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false);
+            .setStyle(TextInputStyle.Short);
 
         const description = new TextInputBuilder()
             .setCustomId('description')
