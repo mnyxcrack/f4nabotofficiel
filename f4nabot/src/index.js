@@ -5,11 +5,13 @@ const path = require('path');
 // ==========================
 // ⚙️ CONFIG RAILWAY (ENV)
 // ==========================
+const localConfig = require('../config.json');
+
 const config = {
-    token: process.env.TOKEN,
-    clientId: process.env.CLIENT_ID,
-    guildId: process.env.GUILD_ID,
-    roleId: process.env.ROLE_ID
+    token: process.env.TOKEN || localConfig.token,
+    clientId: process.env.CLIENT_ID || localConfig.clientId,
+    guildId: process.env.GUILD_ID || localConfig.guildId,
+    roleId: process.env.ROLE_ID || localConfig.roleId
 };
 
 // 🧪 DEBUG TOKEN
