@@ -13,13 +13,13 @@ module.exports = {
 
         const titre = new TextInputBuilder()
             .setCustomId('titre')
-            .setLabel('Titre de l’annonce')
+            .setLabel('Titre')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
         const sousTitre = new TextInputBuilder()
             .setCustomId('sousTitre')
-            .setLabel('Sous-titre / catégorie')
+            .setLabel('Sous-titre')
             .setStyle(TextInputStyle.Short);
 
         const description = new TextInputBuilder()
@@ -30,9 +30,8 @@ module.exports = {
 
         const image = new TextInputBuilder()
             .setCustomId('image')
-            .setLabel('URL de l’image (affiche)')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(false);
+            .setLabel('URL image (mini affiche)')
+            .setStyle(TextInputStyle.Short);
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(titre),
