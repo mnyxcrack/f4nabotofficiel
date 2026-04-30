@@ -28,16 +28,22 @@ module.exports = {
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true);
 
-        const image = new TextInputBuilder()
-            .setCustomId('image')
-            .setLabel('URL image (mini affiche)')
+        const miniImage = new TextInputBuilder()
+            .setCustomId('miniImage')
+            .setLabel('Mini affiche (petite image)')
+            .setStyle(TextInputStyle.Short);
+
+        const bigImage = new TextInputBuilder()
+            .setCustomId('bigImage')
+            .setLabel('Grande affiche (image principale)')
             .setStyle(TextInputStyle.Short);
 
         modal.addComponents(
             new ActionRowBuilder().addComponents(titre),
             new ActionRowBuilder().addComponents(sousTitre),
             new ActionRowBuilder().addComponents(description),
-            new ActionRowBuilder().addComponents(image)
+            new ActionRowBuilder().addComponents(miniImage),
+            new ActionRowBuilder().addComponents(bigImage)
         );
 
         await interaction.showModal(modal);
