@@ -1,9 +1,9 @@
-const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
 const config = require('../config.json');
 const logger = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
-const ora = require('ora').default;
+const ora = require('ora').default; // ✅ FIX ora
 
 // 🧠 Client Discord
 const client = new Client({
@@ -14,7 +14,6 @@ const client = new Client({
         GatewayIntentBits.MessageContent
     ]
 });
-
 client.commands = new Map();
 
 //
@@ -45,11 +44,10 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     const spinner = ora('Chargement des commandes...').start();
 
     try {
-        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
+        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON()); // ✅ FIX Map
 
-        // ✅ FIX → commandes instantanées
         await rest.put(
-            Routes.applicationGuildCommands(config.clientId, config.guildId),
+            Routes.applicationCommands(config.clientId),
             { body: commands }
         );
 
@@ -81,14 +79,14 @@ for (const file of eventFiles) {
 
 //
 // ==========================
-// 🎯 INTERACTIONS
+// 🎯 INTERACTIONS COMMANDES
 // ==========================
 //
 
 client.on('interactionCreate', async interaction => {
 
     // ==========================
-    // 🧾 MODAL ANNONCE
+    // 🧾 GESTION MODAL ANNONCE
     // ==========================
     if (interaction.isModalSubmit()) {
 
@@ -101,7 +99,7 @@ client.on('interactionCreate', async interaction => {
             const embed = new EmbedBuilder()
                 .setTitle(`📢 ${titre}`)
                 .setDescription(description)
-                .setColor('#5865F2')
+                .setColor('#2b2d31')
                 .setFooter({ text: sousTitre || 'Annonce' })
                 .setTimestamp();
 
@@ -146,7 +144,6 @@ client.on('interactionCreate', async interaction => {
         }
     }
 });
-
 //
 // ==========================
 // 🚨 ERREURS GLOBALES
