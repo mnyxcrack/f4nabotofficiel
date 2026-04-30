@@ -84,36 +84,6 @@ for (const file of eventFiles) {
 //
 
 client.on('interactionCreate', async interaction => {
-
-    // ==========================
-    // 🧾 GESTION MODAL ANNONCE
-    // ==========================
-    if (interaction.isModalSubmit()) {
-
-        if (interaction.customId === 'annonceModal') {
-
-            const titre = interaction.fields.getTextInputValue('titre');
-            const sousTitre = interaction.fields.getTextInputValue('sousTitre');
-            const description = interaction.fields.getTextInputValue('description');
-
-            const embed = new EmbedBuilder()
-                .setTitle(`📢 ${titre}`)
-                .setDescription(description)
-                .setColor('#2b2d31')
-                .setFooter({ text: sousTitre || 'Annonce' })
-                .setTimestamp();
-
-            await interaction.reply({
-                embeds: [embed]
-            });
-        }
-
-        return;
-    }
-
-    // ==========================
-    // 🎯 COMMANDES SLASH
-    // ==========================
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
@@ -144,6 +114,7 @@ client.on('interactionCreate', async interaction => {
         }
     }
 });
+
 //
 // ==========================
 // 🚨 ERREURS GLOBALES
