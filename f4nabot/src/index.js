@@ -47,7 +47,7 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     try {
         const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
-        // ✅ GUILD (INSTANT)
+        // ✅ FIX → commandes instantanées
         await rest.put(
             Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: commands }
