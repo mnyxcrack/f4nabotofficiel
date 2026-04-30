@@ -41,7 +41,7 @@ module.exports = {
                 "Sanctions\n" +
                 "Avertissement, mute, kick ou bannissement.\n\n" +
 
-                `Clique sur ${emoji} pour accepter le règlement.`
+                `Clique sur :3dgifmaker67250: pour accepter le règlement.`
             )
             .setImage('attachment://bannier.png');
 
