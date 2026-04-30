@@ -3,19 +3,21 @@ const fs = require('fs');
 const path = require('path');
 
 // ==========================
-// ⚙️ CONFIG RAILWAY (ENV)
+// ⚙️ CONFIG (HYBRIDE)
 // ==========================
 const localConfig = require('../config.json');
 
 const config = {
     token: process.env.TOKEN || localConfig.token,
-    clientId: process.env.CLIENT_ID || localConfig.clientId,
-    guildId: process.env.GUILD_ID || localConfig.guildId,
-    roleId: process.env.ROLE_ID || localConfig.roleId
+    clientId: localConfig.clientId,   // FORCÉ depuis config.json
+    guildId: localConfig.guildId,     // FORCÉ depuis config.json
+    roleId: localConfig.roleId
 };
 
-// 🧪 DEBUG TOKEN
-console.log("TOKEN ENV =", config.token);
+// 🧪 DEBUG (tu peux supprimer après)
+console.log("TOKEN =", config.token ? "OK" : "NULL");
+console.log("CLIENT_ID =", config.clientId);
+console.log("GUILD_ID =", config.guildId);
 
 // ==========================
 // 🧠 CLIENT
@@ -65,9 +67,9 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 })();
 
 // ==========================
-// ✅ BOT READY
+// ✅ READY
 // ==========================
-client.once('ready', () => {
+client.once('clientReady', () => {
     console.log(`✅ Connecté en tant que ${client.user.tag}`);
 });
 
@@ -98,17 +100,28 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    // 🎯 SLASH COMMAND
+    // 🎯 COMMANDES
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
 
+    const member = interaction.member;
+
+    if (command.permission) {
+        if (!member.roles.cache.has(config.roleId)) {
+            return interaction.reply({
+                content: "❌ Tu n'as pas la permission.",
+                ephemeral: true
+            });
+        }
+    }
+
     try {
         await command.execute(interaction);
     } catch (err) {
         console.error(err);
-        interaction.reply({ content: "❌ Erreur.", ephemeral: true });
+        interaction.reply({ content: "❌ Une erreur est survenue.", ephemeral: true });
     }
 });
 
