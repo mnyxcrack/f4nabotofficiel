@@ -33,7 +33,6 @@ client.commands = new Map();
 // ==========================
 // 📦 CHARGEMENT COMMANDES
 // ==========================
-//
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -48,7 +47,6 @@ logger.success(`${client.commands.size} commandes chargées`);
 // ==========================
 // 📡 ENREGISTREMENT COMMANDES (INSTANT)
 // ==========================
-//
 const rest = new REST({ version: '10' }).setToken(config.token);
 
 (async () => {
@@ -73,7 +71,6 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 // ==========================
 // ⚡ CHARGEMENT EVENTS
 // ==========================
-//
 const eventsPath = path.join(__dirname, 'events');
 const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
@@ -91,7 +88,6 @@ for (const file of eventFiles) {
 // ==========================
 // 🎯 INTERACTIONS
 // ==========================
-//
 client.on('interactionCreate', async interaction => {
 
     // ==========================
@@ -106,11 +102,14 @@ client.on('interactionCreate', async interaction => {
             const titre = interaction.fields.getTextInputValue('titre');
             const sousTitre = interaction.fields.getTextInputValue('sousTitre');
             const description = interaction.fields.getTextInputValue('description');
-            const image = interaction.fields.getTextInputValue('image');
+
+            // 🔥 NOUVEAUX CHAMPS
+            const miniImage = interaction.fields.getTextInputValue('miniImage');
+            const bigImage = interaction.fields.getTextInputValue('bigImage');
 
             const embed = new EmbedBuilder()
                 .setColor('#00bfff')
-                .setTitle(titre)
+                .setTitle(`📢 ${titre}`)
                 .setDescription(`> ${description}`)
                 .addFields({
                     name: ' ',
@@ -118,9 +117,14 @@ client.on('interactionCreate', async interaction => {
                 })
                 .setTimestamp();
 
-            // ✅ mini affiche (thumbnail)
-            if (image && image.startsWith("http")) {
-                embed.setThumbnail(image);
+            // 🖼️ Mini affiche (droite)
+            if (miniImage && miniImage.startsWith("http")) {
+                embed.setThumbnail(miniImage);
+            }
+
+            // 🎬 Grande affiche (bas)
+            if (bigImage && bigImage.startsWith("http")) {
+                embed.setImage(bigImage);
             }
 
             await interaction.editReply({
