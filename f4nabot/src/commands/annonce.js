@@ -3,23 +3,23 @@ const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, Act
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('annonce')
-        .setDescription('Créer une annonce'),
+        .setDescription('Créer une annonce stylée'),
 
     async execute(interaction) {
 
         const modal = new ModalBuilder()
             .setCustomId('annonceModal')
-            .setTitle('Créer une annonce');
+            .setTitle('📢 Nouvelle annonce');
 
         const titre = new TextInputBuilder()
             .setCustomId('titre')
-            .setLabel('Titre')
+            .setLabel('Titre de l’annonce')
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
         const sousTitre = new TextInputBuilder()
             .setCustomId('sousTitre')
-            .setLabel('Sous-titre')
+            .setLabel('Sous-titre / catégorie')
             .setStyle(TextInputStyle.Short);
 
         const description = new TextInputBuilder()
@@ -28,10 +28,17 @@ module.exports = {
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true);
 
+        const image = new TextInputBuilder()
+            .setCustomId('image')
+            .setLabel('URL de l’image (affiche)')
+            .setStyle(TextInputStyle.Short)
+            .setRequired(false);
+
         modal.addComponents(
             new ActionRowBuilder().addComponents(titre),
             new ActionRowBuilder().addComponents(sousTitre),
-            new ActionRowBuilder().addComponents(description)
+            new ActionRowBuilder().addComponents(description),
+            new ActionRowBuilder().addComponents(image)
         );
 
         await interaction.showModal(modal);
