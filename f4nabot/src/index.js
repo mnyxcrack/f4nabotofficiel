@@ -1,10 +1,10 @@
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
-const logger = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
-const ora = require('ora').default;
 
-// ✅ CONFIG VIA RAILWAY (ENV)
+// ==========================
+// ⚙️ CONFIG RAILWAY (ENV)
+// ==========================
 const config = {
     token: process.env.TOKEN,
     clientId: process.env.CLIENT_ID,
@@ -12,7 +12,12 @@ const config = {
     roleId: process.env.ROLE_ID
 };
 
-// 🧠 Client Discord
+// 🧪 DEBUG TOKEN
+console.log("TOKEN ENV =", config.token);
+
+// ==========================
+// 🧠 CLIENT
+// ==========================
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -24,12 +29,9 @@ const client = new Client({
 
 client.commands = new Map();
 
-//
 // ==========================
-// 📦 CHARGEMENT COMMANDES
+// 📦 LOAD COMMANDS
 // ==========================
-//
-
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -38,19 +40,14 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
 }
 
-logger.success(`${client.commands.size} commandes chargées`);
+console.log(`${client.commands.size} commandes chargées`);
 
-//
 // ==========================
-// 📡 ENREGISTREMENT COMMANDES
+// 📡 REGISTER COMMANDS
 // ==========================
-//
-
 const rest = new REST({ version: '10' }).setToken(config.token);
 
 (async () => {
-    const spinner = ora('Chargement des commandes...').start();
-
     try {
         const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
@@ -59,22 +56,25 @@ const rest = new REST({ version: '10' }).setToken(config.token);
             { body: commands }
         );
 
-        spinner.succeed('Commandes chargées !');
+        console.log("✔ Commandes chargées !");
     } catch (err) {
-        spinner.fail('Erreur chargement commandes');
-        logger.error(err);
+        console.error("❌ Erreur chargement commandes :", err);
     }
 })();
 
-//
+// ==========================
+// ✅ BOT READY
+// ==========================
+client.once('ready', () => {
+    console.log(`✅ Connecté en tant que ${client.user.tag}`);
+});
+
 // ==========================
 // 🎯 INTERACTIONS
 // ==========================
-//
-
 client.on('interactionCreate', async interaction => {
 
-    // 🧾 MODAL ANNONCE
+    // 🧾 MODAL
     if (interaction.isModalSubmit()) {
 
         if (interaction.customId === 'annonceModal') {
@@ -90,49 +90,27 @@ client.on('interactionCreate', async interaction => {
                 .setFooter({ text: sousTitre || 'Annonce' })
                 .setTimestamp();
 
-            await interaction.reply({
-                embeds: [embed]
-            });
+            await interaction.reply({ embeds: [embed] });
         }
 
         return;
     }
 
-    // 🎯 COMMANDES SLASH
+    // 🎯 SLASH COMMAND
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
 
-    const member = interaction.member;
-
-    if (command.permission) {
-        if (!member.roles.cache.has(config.roleId)) {
-            return interaction.reply({
-                content: "❌ Tu n'as pas la permission.",
-                ephemeral: true
-            });
-        }
-    }
-
     try {
         await command.execute(interaction);
-    } catch (error) {
-        logger.error(error);
-
-        if (!interaction.replied) {
-            interaction.reply({
-                content: "❌ Une erreur est survenue.",
-                ephemeral: true
-            });
-        }
+    } catch (err) {
+        console.error(err);
+        interaction.reply({ content: "❌ Erreur.", ephemeral: true });
     }
 });
 
-//
 // ==========================
-// 🔌 CONNEXION
+// 🔌 LOGIN
 // ==========================
-//
-
 client.login(config.token);
