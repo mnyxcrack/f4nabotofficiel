@@ -1,4 +1,3 @@
-
 const { SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 
 module.exports = {
@@ -7,6 +6,7 @@ module.exports = {
         .setDescription('Créer une annonce'),
 
     async execute(interaction) {
+
         const modal = new ModalBuilder()
             .setCustomId('annonceModal')
             .setTitle('Créer une annonce');
