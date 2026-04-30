@@ -1,9 +1,16 @@
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
-const config = require('../config.json');
+const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
 const logger = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
-const ora = require('ora').default; // ✅ FIX ora
+const ora = require('ora').default;
+
+// ✅ CONFIG VIA RAILWAY (ENV)
+const config = {
+    token: process.env.TOKEN,
+    clientId: process.env.CLIENT_ID,
+    guildId: process.env.GUILD_ID,
+    roleId: process.env.ROLE_ID
+};
 
 // 🧠 Client Discord
 const client = new Client({
@@ -14,6 +21,7 @@ const client = new Client({
         GatewayIntentBits.MessageContent
     ]
 });
+
 client.commands = new Map();
 
 //
@@ -44,10 +52,10 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     const spinner = ora('Chargement des commandes...').start();
 
     try {
-        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON()); // ✅ FIX Map
+        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
         await rest.put(
-            Routes.applicationCommands(config.clientId),
+            Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: commands }
         );
 
@@ -60,30 +68,37 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 
 //
 // ==========================
-// ⚡ CHARGEMENT EVENTS
-// ==========================
-//
-
-const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
-
-for (const file of eventFiles) {
-    const event = require(`./events/${file}`);
-
-    if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args, client));
-    } else {
-        client.on(event.name, (...args) => event.execute(...args, client));
-    }
-}
-
-//
-// ==========================
-// 🎯 INTERACTIONS COMMANDES
+// 🎯 INTERACTIONS
 // ==========================
 //
 
 client.on('interactionCreate', async interaction => {
+
+    // 🧾 MODAL ANNONCE
+    if (interaction.isModalSubmit()) {
+
+        if (interaction.customId === 'annonceModal') {
+
+            const titre = interaction.fields.getTextInputValue('titre');
+            const sousTitre = interaction.fields.getTextInputValue('sousTitre');
+            const description = interaction.fields.getTextInputValue('description');
+
+            const embed = new EmbedBuilder()
+                .setTitle(`📢 ${titre}`)
+                .setDescription(description)
+                .setColor('#5865F2')
+                .setFooter({ text: sousTitre || 'Annonce' })
+                .setTimestamp();
+
+            await interaction.reply({
+                embeds: [embed]
+            });
+        }
+
+        return;
+    }
+
+    // 🎯 COMMANDES SLASH
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
@@ -91,7 +106,6 @@ client.on('interactionCreate', async interaction => {
 
     const member = interaction.member;
 
-    // 🔐 Vérification rôle
     if (command.permission) {
         if (!member.roles.cache.has(config.roleId)) {
             return interaction.reply({
@@ -113,20 +127,6 @@ client.on('interactionCreate', async interaction => {
             });
         }
     }
-});
-
-//
-// ==========================
-// 🚨 ERREURS GLOBALES
-// ==========================
-//
-
-process.on('unhandledRejection', err => {
-    logger.error(`UnhandledRejection: ${err}`);
-});
-
-process.on('uncaughtException', err => {
-    logger.error(`UncaughtException: ${err}`);
 });
 
 //
