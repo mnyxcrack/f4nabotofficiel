@@ -1,26 +1,22 @@
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
+const localConfig = require('../config.json');
+const logger = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
+const ora = require('ora').default;
 
 // ==========================
-// ⚙️ CONFIG (HYBRIDE)
+// ⚙️ CONFIG HYBRIDE (RAILWAY + LOCAL)
 // ==========================
-const localConfig = require('../config.json');
-
 const config = {
     token: process.env.TOKEN || localConfig.token,
-    clientId: localConfig.clientId,   // FORCÉ depuis config.json
-    guildId: localConfig.guildId,     // FORCÉ depuis config.json
+    clientId: localConfig.clientId,
+    guildId: localConfig.guildId,
     roleId: localConfig.roleId
 };
 
-// 🧪 DEBUG (tu peux supprimer après)
-console.log("TOKEN =", config.token ? "OK" : "NULL");
-console.log("CLIENT_ID =", config.clientId);
-console.log("GUILD_ID =", config.guildId);
-
 // ==========================
-// 🧠 CLIENT
+// 🧠 CLIENT DISCORD
 // ==========================
 const client = new Client({
     intents: [
@@ -33,9 +29,11 @@ const client = new Client({
 
 client.commands = new Map();
 
+//
 // ==========================
-// 📦 LOAD COMMANDS
+// 📦 CHARGEMENT COMMANDES
 // ==========================
+//
 const commandsPath = path.join(__dirname, 'commands');
 const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
@@ -44,14 +42,18 @@ for (const file of commandFiles) {
     client.commands.set(command.data.name, command);
 }
 
-console.log(`${client.commands.size} commandes chargées`);
+logger.success(`${client.commands.size} commandes chargées`);
 
+//
 // ==========================
-// 📡 REGISTER COMMANDS
+// 📡 ENREGISTREMENT COMMANDES (INSTANT)
 // ==========================
+//
 const rest = new REST({ version: '10' }).setToken(config.token);
 
 (async () => {
+    const spinner = ora('Chargement des commandes...').start();
+
     try {
         const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
@@ -60,47 +62,78 @@ const rest = new REST({ version: '10' }).setToken(config.token);
             { body: commands }
         );
 
-        console.log("✔ Commandes chargées !");
+        spinner.succeed('Commandes chargées !');
     } catch (err) {
-        console.error("❌ Erreur chargement commandes :", err);
+        spinner.fail('Erreur chargement commandes');
+        logger.error(err);
     }
 })();
 
+//
 // ==========================
-// ✅ READY
+// ⚡ CHARGEMENT EVENTS
 // ==========================
-client.once('clientReady', () => {
-    console.log(`✅ Connecté en tant que ${client.user.tag}`);
-});
+//
+const eventsPath = path.join(__dirname, 'events');
+const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
+for (const file of eventFiles) {
+    const event = require(`./events/${file}`);
+
+    if (event.once) {
+        client.once(event.name, (...args) => event.execute(...args, client));
+    } else {
+        client.on(event.name, (...args) => event.execute(...args, client));
+    }
+}
+
+//
 // ==========================
 // 🎯 INTERACTIONS
 // ==========================
+//
 client.on('interactionCreate', async interaction => {
 
-    // 🧾 MODAL
+    // ==========================
+    // 🧾 MODAL ANNONCE
+    // ==========================
     if (interaction.isModalSubmit()) {
 
         if (interaction.customId === 'annonceModal') {
 
+            await interaction.deferReply(); // ⏳ animation chargement
+
             const titre = interaction.fields.getTextInputValue('titre');
             const sousTitre = interaction.fields.getTextInputValue('sousTitre');
             const description = interaction.fields.getTextInputValue('description');
+            const image = interaction.fields.getTextInputValue('image');
 
             const embed = new EmbedBuilder()
-                .setTitle(`📢 ${titre}`)
-                .setDescription(description)
-                .setColor('#5865F2')
-                .setFooter({ text: sousTitre || 'Annonce' })
+                .setColor('#00bfff')
+                .setTitle(titre)
+                .setDescription(`> ${description}`)
+                .addFields({
+                    name: ' ',
+                    value: `**${sousTitre || 'Annonce'}**`
+                })
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed] });
+            // ✅ mini affiche (thumbnail)
+            if (image && image.startsWith("http")) {
+                embed.setThumbnail(image);
+            }
+
+            await interaction.editReply({
+                embeds: [embed]
+            });
         }
 
         return;
     }
 
-    // 🎯 COMMANDES
+    // ==========================
+    // 🎯 COMMANDES SLASH
+    // ==========================
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
@@ -108,6 +141,7 @@ client.on('interactionCreate', async interaction => {
 
     const member = interaction.member;
 
+    // 🔐 Vérification rôle
     if (command.permission) {
         if (!member.roles.cache.has(config.roleId)) {
             return interaction.reply({
@@ -119,13 +153,32 @@ client.on('interactionCreate', async interaction => {
 
     try {
         await command.execute(interaction);
-    } catch (err) {
-        console.error(err);
-        interaction.reply({ content: "❌ Une erreur est survenue.", ephemeral: true });
+    } catch (error) {
+        logger.error(error);
+
+        if (!interaction.replied) {
+            interaction.reply({
+                content: "❌ Une erreur est survenue.",
+                ephemeral: true
+            });
+        }
     }
 });
 
+//
 // ==========================
-// 🔌 LOGIN
+// 🚨 ERREURS GLOBALES
+// ==========================
+process.on('unhandledRejection', err => {
+    logger.error(`UnhandledRejection: ${err}`);
+});
+
+process.on('uncaughtException', err => {
+    logger.error(`UncaughtException: ${err}`);
+});
+
+//
+// ==========================
+// 🔌 CONNEXION
 // ==========================
 client.login(config.token);
