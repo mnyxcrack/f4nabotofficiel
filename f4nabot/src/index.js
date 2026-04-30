@@ -3,7 +3,7 @@ const config = require('../config.json');
 const logger = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
-const ora = require('ora').default; // ✅ FIX ora
+const ora = require('ora').default;
 
 // 🧠 Client Discord
 const client = new Client({
@@ -14,6 +14,7 @@ const client = new Client({
         GatewayIntentBits.MessageContent
     ]
 });
+
 client.commands = new Map();
 
 //
@@ -44,10 +45,11 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     const spinner = ora('Chargement des commandes...').start();
 
     try {
-        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON()); // ✅ FIX Map
+        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
+        // ✅ GUILD (INSTANT)
         await rest.put(
-            Routes.applicationCommands(config.clientId),
+            Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: commands }
         );
 
@@ -79,14 +81,14 @@ for (const file of eventFiles) {
 
 //
 // ==========================
-// 🎯 INTERACTIONS COMMANDES
+// 🎯 INTERACTIONS
 // ==========================
 //
 
 client.on('interactionCreate', async interaction => {
 
     // ==========================
-    // 🧾 GESTION MODAL ANNONCE
+    // 🧾 MODAL ANNONCE
     // ==========================
     if (interaction.isModalSubmit()) {
 
@@ -99,7 +101,7 @@ client.on('interactionCreate', async interaction => {
             const embed = new EmbedBuilder()
                 .setTitle(`📢 ${titre}`)
                 .setDescription(description)
-                .setColor('#2b2d31')
+                .setColor('#5865F2')
                 .setFooter({ text: sousTitre || 'Annonce' })
                 .setTimestamp();
 
@@ -144,6 +146,7 @@ client.on('interactionCreate', async interaction => {
         }
     }
 });
+
 //
 // ==========================
 // 🚨 ERREURS GLOBALES
