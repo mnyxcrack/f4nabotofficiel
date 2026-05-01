@@ -9,7 +9,7 @@ module.exports = {
 
         const modal = new ModalBuilder()
             .setCustomId('annonceModal')
-            .setTitle('📢 Nouvelle annonce');
+            .setTitle('Nouvelle annonce');
 
         const titre = new TextInputBuilder()
             .setCustomId('titre')
