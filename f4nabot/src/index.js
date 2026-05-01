@@ -45,7 +45,7 @@ logger.success(`${client.commands.size} commandes chargées`);
 
 //
 // ==========================
-// 📡 ENREGISTREMENT COMMANDES (INSTANT)
+// 📡 ENREGISTREMENT COMMANDES
 // ==========================
 const rest = new REST({ version: '10' }).setToken(config.token);
 
@@ -97,32 +97,32 @@ client.on('interactionCreate', async interaction => {
 
         if (interaction.customId === 'annonceModal') {
 
-            await interaction.deferReply(); // ⏳ animation chargement
+            await interaction.deferReply(); // ⏳ chargement
 
             const titre = interaction.fields.getTextInputValue('titre');
             const sousTitre = interaction.fields.getTextInputValue('sousTitre');
             const description = interaction.fields.getTextInputValue('description');
 
-            // 🔥 NOUVEAUX CHAMPS
             const miniImage = interaction.fields.getTextInputValue('miniImage');
             const bigImage = interaction.fields.getTextInputValue('bigImage');
 
             const embed = new EmbedBuilder()
-                .setColor('#00bfff')
-                .setTitle(`📢 ${titre}`)
-                .setDescription(`> ${description}`)
-                .addFields({
-                    name: ' ',
-                    value: `**${sousTitre || 'Annonce'}**`
-                })
+                .setColor('#2b2d31') // 🔥 rend la barre invisible
+                .setTitle(titre) // ❌ plus d'emoji
+                .setDescription(description) // ❌ plus de ">"
                 .setTimestamp();
 
-            // 🖼️ Mini affiche (droite)
+            // sous titre propre
+            if (sousTitre) {
+                embed.setFooter({ text: sousTitre });
+            }
+
+            // mini image (droite)
             if (miniImage && miniImage.startsWith("http")) {
                 embed.setThumbnail(miniImage);
             }
 
-            // 🎬 Grande affiche (bas)
+            // grande image (bas)
             if (bigImage && bigImage.startsWith("http")) {
                 embed.setImage(bigImage);
             }
