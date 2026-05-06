@@ -6,7 +6,7 @@ const path = require('path');
 const ora = require('ora').default;
 
 // ==========================
-// ⚙️ CONFIG
+// CONFIG
 // ==========================
 const config = {
     token: process.env.TOKEN || localConfig.token,
@@ -16,7 +16,7 @@ const config = {
 };
 
 // ==========================
-// 🧠 CLIENT
+// CLIENT
 // ==========================
 const client = new Client({
     intents: [
@@ -29,178 +29,95 @@ const client = new Client({
 
 client.commands = new Map();
 
-//
 // ==========================
-// 📦 LOAD COMMANDS (SAFE)
+// LOAD COMMANDS
 // ==========================
 const commandsPath = path.join(__dirname, 'commands');
 
-if (fs.existsSync(commandsPath)) {
-    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+const commandsArray = [];
 
-    for (const file of commandFiles) {
-        try {
-            const command = require(`./commands/${file}`);
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-            if (!command.data || !command.execute) {
-                console.log(`❌ Commande invalide ignorée: ${file}`);
-                continue;
-            }
+for (const file of commandFiles) {
+    try {
+        console.log("📂 Chargement :", file);
 
-            client.commands.set(command.data.name, command);
-            console.log(`✅ Commande chargée: ${command.data.name}`);
+        const command = require(`./commands/${file}`);
 
-        } catch (err) {
-            console.log(`💥 Erreur chargement ${file}:`, err);
+        if (!command.data || !command.execute) {
+            console.log(`❌ Ignoré: ${file}`);
+            continue;
         }
+
+        client.commands.set(command.data.name, command);
+        commandsArray.push(command.data.toJSON());
+
+        console.log(`✅ OK: ${command.data.name}`);
+
+    } catch (err) {
+        console.log(`💥 ERREUR ${file}`, err);
     }
 }
 
-logger.success(`${client.commands.size} commandes chargées`);
+console.log("📦 COMMANDES FINALES :", commandsArray.map(c => c.name));
 
-//
+
 // ==========================
-// 📡 REGISTER COMMANDS (FIX + RESET)
+// REGISTER COMMANDS (RESET FIX)
 // ==========================
 const rest = new REST({ version: '10' }).setToken(config.token);
 
 (async () => {
-    const spinner = ora('Chargement des commandes...').start();
+    const spinner = ora('Sync commandes...').start();
 
     try {
-        const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
-        // 🔍 DEBUG
-        console.log("📦 Commandes détectées :", commands.map(c => c.name));
-
-        // 🧹 RESET TOTAL (corrige 99% des bugs)
+        // 🔥 RESET (OBLIGATOIRE)
         await rest.put(
             Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: [] }
         );
 
-        // 📡 RELOAD
+        console.log("🧹 Reset OK");
+
+        // 🔥 REGISTER
         await rest.put(
             Routes.applicationGuildCommands(config.clientId, config.guildId),
-            { body: commands }
+            { body: commandsArray }
         );
 
-        spinner.succeed('Commandes chargées !');
+        spinner.succeed("✅ Commandes synchronisées");
 
     } catch (err) {
-        spinner.fail('Erreur chargement commandes');
+        spinner.fail("❌ Erreur sync");
         console.error(err);
     }
 })();
 
-//
+
 // ==========================
-// ⚡ LOAD EVENTS
-// ==========================
-const eventsPath = path.join(__dirname, 'events');
-
-if (fs.existsSync(eventsPath)) {
-    const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
-
-    for (const file of eventFiles) {
-        try {
-            const event = require(`./events/${file}`);
-
-            if (!event.name || !event.execute) {
-                console.log(`❌ Event invalide: ${file}`);
-                continue;
-            }
-
-            if (event.once) {
-                client.once(event.name, (...args) => event.execute(...args, client));
-            } else {
-                client.on(event.name, (...args) => event.execute(...args, client));
-            }
-
-            console.log(`📡 Event chargé: ${event.name}`);
-
-        } catch (err) {
-            console.log(`💥 Erreur event ${file}:`, err);
-        }
-    }
-}
-
-//
-// ==========================
-// 🎯 INTERACTIONS
+// EVENTS
 // ==========================
 client.on('interactionCreate', async interaction => {
-
-    if (interaction.isModalSubmit()) {
-
-        if (interaction.customId === 'annonceModal') {
-
-            await interaction.deferReply();
-
-            const titre = interaction.fields.getTextInputValue('titre');
-            const sousTitre = interaction.fields.getTextInputValue('sousTitre');
-            const description = interaction.fields.getTextInputValue('description');
-            const image = interaction.fields.getTextInputValue('image');
-
-            const embed = new EmbedBuilder()
-                .setColor('#00bfff')
-                .setTitle(titre)
-                .setDescription(`> ${description}`)
-                .addFields({
-                    name: ' ',
-                    value: `**${sousTitre || 'Annonce'}**`
-                })
-                .setTimestamp();
-
-            if (image && image.startsWith("http")) {
-                embed.setThumbnail(image);
-            }
-
-            await interaction.editReply({ embeds: [embed] });
-        }
-
-        return;
-    }
 
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
     if (!command) return;
 
-    const member = interaction.member;
-
-    if (command.permission) {
-        if (!member.roles.cache.has(config.roleId)) {
-            return interaction.reply({
-                content: "❌ Tu n'as pas la permission.",
-                ephemeral: true
-            });
-        }
-    }
-
     try {
         await command.execute(interaction);
-    } catch (error) {
-        console.error(error);
-
-        if (!interaction.replied) {
-            interaction.reply({
-                content: "❌ Une erreur est survenue.",
-                ephemeral: true
-            });
-        }
+    } catch (err) {
+        console.error(err);
+        interaction.reply({
+            content: "❌ Erreur",
+            ephemeral: true
+        });
     }
 });
 
-//
-// ==========================
-// 🚨 ERREURS (ANTI CRASH)
 // ==========================
 process.on('unhandledRejection', console.error);
 process.on('uncaughtException', console.error);
 
-//
-// ==========================
-// 🔌 LOGIN
-// ==========================
 client.login(config.token);
