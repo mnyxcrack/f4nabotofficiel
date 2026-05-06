@@ -1,5 +1,4 @@
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
-client.on('blacklist', (...args) => require('./events/blacklist').execute(...args));
 const localConfig = require('../config.json');
 const logger = require('./utils/logger');
 const fs = require('fs');
