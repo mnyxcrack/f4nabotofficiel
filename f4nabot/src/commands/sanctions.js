@@ -9,84 +9,86 @@ const config = require('../../config.json');
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('sanctions')
-        .setDescription('Gérer les sanctions')
+        .setDescription('🔧 Gestion des sanctions')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 
         .addSubcommand(sub =>
             sub.setName('ban')
-                .setDescription('Ban un utilisateur')
-                .addUserOption(opt => opt.setName('user').setDescription('Utilisateur').setRequired(true))
-        )
-
-        .addSubcommand(sub =>
-            sub.setName('unban')
-                .setDescription('Unban un utilisateur')
-                .addStringOption(opt => opt.setName('id').setDescription('ID utilisateur').setRequired(true))
+                .setDescription('🔨 Bannir')
+                .addUserOption(opt => opt.setName('user').setRequired(true))
+                .addStringOption(opt => opt.setName('raison'))
         )
 
         .addSubcommand(sub =>
             sub.setName('kick')
-                .setDescription('Kick un utilisateur')
-                .addUserOption(opt => opt.setName('user').setDescription('Utilisateur').setRequired(true))
+                .setDescription('👢 Kick')
+                .addUserOption(opt => opt.setName('user').setRequired(true))
         )
 
         .addSubcommand(sub =>
             sub.setName('mute')
-                .setDescription('Mute un utilisateur')
-                .addUserOption(opt => opt.setName('user').setDescription('Utilisateur').setRequired(true))
+                .setDescription('🔇 Mute')
+                .addUserOption(opt => opt.setName('user').setRequired(true))
         )
 
         .addSubcommand(sub =>
             sub.setName('unmute')
-                .setDescription('Unmute un utilisateur')
-                .addUserOption(opt => opt.setName('user').setDescription('Utilisateur').setRequired(true))
+                .setDescription('🔊 Unmute')
+                .addUserOption(opt => opt.setName('user').setRequired(true))
         )
 
         .addSubcommand(sub =>
             sub.setName('blacklist')
-                .setDescription('Blacklist un utilisateur')
-                .addUserOption(opt => opt.setName('user').setDescription('Utilisateur').setRequired(true))
+                .setDescription('🚫 Blacklist')
+                .addUserOption(opt => opt.setName('user').setRequired(true))
         )
 
         .addSubcommand(sub =>
             sub.setName('unblacklist')
-                .setDescription('Retirer blacklist')
-                .addUserOption(opt => opt.setName('user').setDescription('Utilisateur').setRequired(true))
+                .setDescription('✅ Unblacklist')
+                .addUserOption(opt => opt.setName('user').setRequired(true))
         ),
 
     async execute(interaction) {
 
         const sub = interaction.options.getSubcommand();
         const user = interaction.options.getUser('user');
-        const member = user ? await interaction.guild.members.fetch(user.id).catch(() => null) : null;
+        const reason = interaction.options.getString('raison') || "Aucune raison";
+        const member = await interaction.guild.members.fetch(user.id).catch(() => null);
 
         const embed = new EmbedBuilder()
-            .setColor('#ff0000')
+            .setFooter({ text: `Modération • ${interaction.guild.name}` })
             .setTimestamp();
 
         try {
 
             // 🔨 BAN
             if (sub === 'ban') {
-                await member.ban({ reason: "Sanction staff" });
+                await member.ban({ reason });
 
-                embed.setDescription(`🔨 ${user.tag} a été ban.`);
-            }
-
-            // 🔓 UNBAN
-            if (sub === 'unban') {
-                const id = interaction.options.getString('id');
-
-                await interaction.guild.members.unban(id);
-
-                embed.setDescription(`🔓 Utilisateur ${id} unban.`);
+                embed
+                    .setColor('#ff0000')
+                    .setTitle('🔨 Bannissement')
+                    .setDescription(`**${user.tag}** a été banni`)
+                    .addFields(
+                        { name: "👤 Utilisateur", value: `<@${user.id}>`, inline: true },
+                        { name: "📄 Raison", value: reason, inline: true },
+                        { name: "👮 Staff", value: `<@${interaction.user.id}>`, inline: true }
+                    );
             }
 
             // 👢 KICK
             if (sub === 'kick') {
-                await member.kick();
+                await member.kick(reason);
 
-                embed.setDescription(`👢 ${user.tag} a été kick.`);
+                embed
+                    .setColor('#ff8800')
+                    .setTitle('👢 Expulsion')
+                    .setDescription(`**${user.tag}** a été expulsé`)
+                    .addFields(
+                        { name: "👤 Utilisateur", value: `<@${user.id}>`, inline: true },
+                        { name: "👮 Staff", value: `<@${interaction.user.id}>`, inline: true }
+                    );
             }
 
             // 🔇 MUTE
@@ -96,7 +98,14 @@ module.exports = {
 
                 await member.roles.add(role);
 
-                embed.setDescription(`🔇 ${user.tag} a été mute.`);
+                embed
+                    .setColor('#5865F2')
+                    .setTitle('🔇 Mute')
+                    .setDescription(`**${user.tag}** a été mute`)
+                    .addFields(
+                        { name: "👤 Utilisateur", value: `<@${user.id}>`, inline: true },
+                        { name: "👮 Staff", value: `<@${interaction.user.id}>`, inline: true }
+                    );
             }
 
             // 🔊 UNMUTE
@@ -106,7 +115,14 @@ module.exports = {
 
                 await member.roles.remove(role);
 
-                embed.setDescription(`🔊 ${user.tag} a été unmute.`);
+                embed
+                    .setColor('#57F287')
+                    .setTitle('🔊 Unmute')
+                    .setDescription(`**${user.tag}** a été unmute`)
+                    .addFields(
+                        { name: "👤 Utilisateur", value: `<@${user.id}>`, inline: true },
+                        { name: "👮 Staff", value: `<@${interaction.user.id}>`, inline: true }
+                    );
             }
 
             // 🚫 BLACKLIST
@@ -116,7 +132,14 @@ module.exports = {
 
                 await member.roles.add(role);
 
-                embed.setDescription(`🚫 ${user.tag} est blacklist.`);
+                embed
+                    .setColor('#000000')
+                    .setTitle('🚫 Blacklist')
+                    .setDescription(`**${user.tag}** est blacklist`)
+                    .addFields(
+                        { name: "👤 Utilisateur", value: `<@${user.id}>`, inline: true },
+                        { name: "👮 Staff", value: `<@${interaction.user.id}>`, inline: true }
+                    );
             }
 
             // ✅ UNBLACKLIST
@@ -126,7 +149,14 @@ module.exports = {
 
                 await member.roles.remove(role);
 
-                embed.setDescription(`✅ ${user.tag} retiré de blacklist.`);
+                embed
+                    .setColor('#00ffcc')
+                    .setTitle('✅ Unblacklist')
+                    .setDescription(`**${user.tag}** n'est plus blacklist`)
+                    .addFields(
+                        { name: "👤 Utilisateur", value: `<@${user.id}>`, inline: true },
+                        { name: "👮 Staff", value: `<@${interaction.user.id}>`, inline: true }
+                    );
             }
 
             await interaction.reply({ embeds: [embed] });
@@ -134,7 +164,7 @@ module.exports = {
         } catch (err) {
             console.error(err);
 
-            interaction.reply({
+            return interaction.reply({
                 content: "❌ Erreur lors de la sanction.",
                 ephemeral: true
             });
