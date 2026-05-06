@@ -28,9 +28,8 @@ const client = new Client({
 
 client.commands = new Map();
 
-
 // ==========================
-// LOAD COMMANDS
+// LOAD COMMANDS (ANTI CRASH)
 // ==========================
 const commandsPath = path.join(__dirname, 'commands');
 const commandsArray = [];
@@ -41,7 +40,7 @@ if (fs.existsSync(commandsPath)) {
 
     for (const file of commandFiles) {
         try {
-            console.log("📂 Commande:", file);
+            console.log(`📂 Chargement: ${file}`);
 
             const command = require(`./commands/${file}`);
 
@@ -50,13 +49,24 @@ if (fs.existsSync(commandsPath)) {
                 continue;
             }
 
-            client.commands.set(command.data.name, command);
-            commandsArray.push(command.data.toJSON());
+            // 🔥 TEST JSON (évite crash Discord)
+            try {
+                const json = command.data.toJSON();
 
-            console.log(`✅ Chargée: ${command.data.name}`);
+                client.commands.set(command.data.name, command);
+                commandsArray.push(json);
+
+                console.log(`✅ OK: ${command.data.name}`);
+
+            } catch (err) {
+                console.log(`❌ Commande cassée ignorée: ${file}`);
+                console.log(err.message);
+                continue;
+            }
 
         } catch (err) {
-            console.log(`💥 Erreur ${file}`, err);
+            console.log(`💥 Erreur chargement ${file}`);
+            console.log(err);
         }
     }
 }
@@ -70,7 +80,7 @@ console.log("📦 Commandes finales:", commandsArray.map(c => c.name));
 const rest = new REST({ version: '10' }).setToken(config.token);
 
 (async () => {
-    const spinner = ora('Sync commandes...').start();
+    const spinner = ora('Synchronisation commandes...').start();
 
     try {
 
@@ -108,7 +118,7 @@ if (fs.existsSync(eventsPath)) {
 
     for (const file of eventFiles) {
         try {
-            console.log("📡 Event:", file);
+            console.log(`📡 Event: ${file}`);
 
             const event = require(`./events/${file}`);
 
@@ -126,7 +136,8 @@ if (fs.existsSync(eventsPath)) {
             console.log(`✅ Event chargé: ${event.name}`);
 
         } catch (err) {
-            console.log(`💥 Erreur event ${file}`, err);
+            console.log(`💥 Erreur event ${file}`);
+            console.log(err);
         }
     }
 }
@@ -179,8 +190,9 @@ client.on('interactionCreate', async interaction => {
         await command.execute(interaction);
     } catch (err) {
         console.error(err);
+
         interaction.reply({
-            content: "❌ Erreur commande",
+            content: "❌ Une erreur est survenue.",
             ephemeral: true
         });
     }
