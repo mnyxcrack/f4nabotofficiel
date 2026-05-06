@@ -1,6 +1,5 @@
 const { Client, GatewayIntentBits, REST, Routes, EmbedBuilder } = require('discord.js');
 const localConfig = require('../config.json');
-const logger = require('./utils/logger');
 const fs = require('fs');
 const path = require('path');
 const ora = require('ora').default;
@@ -29,41 +28,44 @@ const client = new Client({
 
 client.commands = new Map();
 
+
 // ==========================
 // LOAD COMMANDS
 // ==========================
 const commandsPath = path.join(__dirname, 'commands');
-
 const commandsArray = [];
 
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+if (fs.existsSync(commandsPath)) {
 
-for (const file of commandFiles) {
-    try {
-        console.log("📂 Chargement :", file);
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-        const command = require(`./commands/${file}`);
+    for (const file of commandFiles) {
+        try {
+            console.log("📂 Commande:", file);
 
-        if (!command.data || !command.execute) {
-            console.log(`❌ Ignoré: ${file}`);
-            continue;
+            const command = require(`./commands/${file}`);
+
+            if (!command.data || !command.execute) {
+                console.log(`❌ Invalide: ${file}`);
+                continue;
+            }
+
+            client.commands.set(command.data.name, command);
+            commandsArray.push(command.data.toJSON());
+
+            console.log(`✅ Chargée: ${command.data.name}`);
+
+        } catch (err) {
+            console.log(`💥 Erreur ${file}`, err);
         }
-
-        client.commands.set(command.data.name, command);
-        commandsArray.push(command.data.toJSON());
-
-        console.log(`✅ OK: ${command.data.name}`);
-
-    } catch (err) {
-        console.log(`💥 ERREUR ${file}`, err);
     }
 }
 
-console.log("📦 COMMANDES FINALES :", commandsArray.map(c => c.name));
+console.log("📦 Commandes finales:", commandsArray.map(c => c.name));
 
 
 // ==========================
-// REGISTER COMMANDS (RESET FIX)
+// REGISTER COMMANDS
 // ==========================
 const rest = new REST({ version: '10' }).setToken(config.token);
 
@@ -72,7 +74,7 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 
     try {
 
-        // 🔥 RESET (OBLIGATOIRE)
+        // RESET
         await rest.put(
             Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: [] }
@@ -80,7 +82,7 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 
         console.log("🧹 Reset OK");
 
-        // 🔥 REGISTER
+        // REGISTER
         await rest.put(
             Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: commandsArray }
@@ -96,10 +98,78 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 
 
 // ==========================
-// EVENTS
+// LOAD EVENTS
+// ==========================
+const eventsPath = path.join(__dirname, 'events');
+
+if (fs.existsSync(eventsPath)) {
+
+    const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
+
+    for (const file of eventFiles) {
+        try {
+            console.log("📡 Event:", file);
+
+            const event = require(`./events/${file}`);
+
+            if (!event.name || !event.execute) {
+                console.log(`❌ Event invalide: ${file}`);
+                continue;
+            }
+
+            if (event.once) {
+                client.once(event.name, (...args) => event.execute(...args, client));
+            } else {
+                client.on(event.name, (...args) => event.execute(...args, client));
+            }
+
+            console.log(`✅ Event chargé: ${event.name}`);
+
+        } catch (err) {
+            console.log(`💥 Erreur event ${file}`, err);
+        }
+    }
+}
+
+
+// ==========================
+// INTERACTIONS
 // ==========================
 client.on('interactionCreate', async interaction => {
 
+    // MODAL
+    if (interaction.isModalSubmit()) {
+
+        if (interaction.customId === 'annonceModal') {
+
+            await interaction.deferReply();
+
+            const titre = interaction.fields.getTextInputValue('titre');
+            const sousTitre = interaction.fields.getTextInputValue('sousTitre');
+            const description = interaction.fields.getTextInputValue('description');
+            const image = interaction.fields.getTextInputValue('image');
+
+            const embed = new EmbedBuilder()
+                .setColor('#00bfff')
+                .setTitle(titre)
+                .setDescription(`> ${description}`)
+                .addFields({
+                    name: ' ',
+                    value: `**${sousTitre || 'Annonce'}**`
+                })
+                .setTimestamp();
+
+            if (image && image.startsWith("http")) {
+                embed.setThumbnail(image);
+            }
+
+            await interaction.editReply({ embeds: [embed] });
+        }
+
+        return;
+    }
+
+    // COMMANDES
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
@@ -110,14 +180,19 @@ client.on('interactionCreate', async interaction => {
     } catch (err) {
         console.error(err);
         interaction.reply({
-            content: "❌ Erreur",
+            content: "❌ Erreur commande",
             ephemeral: true
         });
     }
 });
 
+
+// ==========================
+// ANTI CRASH
 // ==========================
 process.on('unhandledRejection', console.error);
 process.on('uncaughtException', console.error);
 
+
+// ==========================
 client.login(config.token);
