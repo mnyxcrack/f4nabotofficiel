@@ -11,6 +11,7 @@
   "raidInterval": 10000,
   "muteRoleId": "1498600103123095693",
   "blacklistRoleId": "1501382285709152298",
+"prisonChannelId": "1501392870601396294",
   "sanctionThreshold": 3,
   "reglementRoleId": "1496955671852351528"
 }
