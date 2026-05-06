@@ -9,10 +9,18 @@ const path = require('path');
 
 const dataPath = path.join(__dirname, '../../data/warns.json');
 
+// ✅ LOAD SAFE
 function loadData() {
-    return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
+    try {
+        if (!fs.existsSync(dataPath)) return {};
+        const raw = fs.readFileSync(dataPath, 'utf8');
+        return raw ? JSON.parse(raw) : {};
+    } catch {
+        return {};
+    }
 }
 
+// ✅ SAVE
 function saveData(data) {
     fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
 }
@@ -26,20 +34,28 @@ module.exports = {
         .addSubcommand(sub =>
             sub.setName('add')
                 .setDescription('Ajouter un avertissement')
-                .addUserOption(opt => opt.setName('user').setRequired(true))
-                .addStringOption(opt => opt.setName('raison').setRequired(true))
+                .addUserOption(opt =>
+                    opt.setName('user').setRequired(true)
+                )
+                .addStringOption(opt =>
+                    opt.setName('raison').setRequired(true)
+                )
         )
 
         .addSubcommand(sub =>
             sub.setName('list')
-                .setDescription('Voir les warns')
-                .addUserOption(opt => opt.setName('user').setRequired(true))
+                .setDescription('Voir les avertissements')
+                .addUserOption(opt =>
+                    opt.setName('user').setRequired(true)
+                )
         )
 
         .addSubcommand(sub =>
             sub.setName('clear')
-                .setDescription('Supprimer les warns')
-                .addUserOption(opt => opt.setName('user').setRequired(true))
+                .setDescription('Supprimer les avertissements')
+                .addUserOption(opt =>
+                    opt.setName('user').setRequired(true)
+                )
         ),
 
     async execute(interaction) {
@@ -52,9 +68,9 @@ module.exports = {
 
         if (!data[user.id]) data[user.id] = [];
 
-        // =========================
+        // =====================
         // ADD WARN
-        // =========================
+        // =====================
         if (sub === "add") {
 
             const warn = {
@@ -68,7 +84,10 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor('#ED4245')
-                .setTitle('⚠️ Avertissement')
+                .setAuthor({
+                    name: "⚠️ Avertissement",
+                    iconURL: interaction.guild.iconURL()
+                })
                 .setDescription(`> **${user.tag}** a reçu un avertissement`)
                 .addFields(
                     { name: "📄 Raison", value: reason },
@@ -80,9 +99,9 @@ module.exports = {
             await interaction.reply({ embeds: [embed] });
         }
 
-        // =========================
+        // =====================
         // LIST WARN
-        // =========================
+        // =====================
         if (sub === "list") {
 
             if (!data[user.id] || data[user.id].length === 0) {
@@ -92,7 +111,7 @@ module.exports = {
                 });
             }
 
-            const warns = data[user.id]
+            const list = data[user.id]
                 .map((w, i) =>
                     `**#${i + 1}** • ${w.reason}\n👮 ${w.staff} | 🕒 ${w.date}`
                 )
@@ -101,15 +120,20 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor('#5865F2')
                 .setTitle(`📊 Warns de ${user.tag}`)
-                .setDescription(warns)
-                .setFooter({ text: `${data[user.id].length} warn(s)` });
+                .setDescription(list)
+                .setFooter({
+                    text: `${data[user.id].length} avertissement(s)`
+                });
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({
+                embeds: [embed],
+                ephemeral: true
+            });
         }
 
-        // =========================
+        // =====================
         // CLEAR WARN
-        // =========================
+        // =====================
         if (sub === "clear") {
 
             data[user.id] = [];
