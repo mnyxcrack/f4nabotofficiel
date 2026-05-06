@@ -11,43 +11,44 @@ const LOG_CHANNEL_ID = "1501388106736074772";
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('sanctions')
-        .setDescription('🔧 Gestion des sanctions')
+        .setDescription('Gestion des sanctions')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 
         .addSubcommand(sub =>
+            sub.setName('mute')
+                .setDescription('Mute un utilisateur')
+                .addUserOption(opt => opt.setName('user').setRequired(true))
+                .addStringOption(opt => opt.setName('raison'))
+        )
+
+        .addSubcommand(sub =>
+            sub.setName('unmute')
+                .setDescription('Unmute un utilisateur')
+                .addUserOption(opt => opt.setName('user').setRequired(true))
+        )
+
+        .addSubcommand(sub =>
             sub.setName('ban')
-                .setDescription('🔨 Bannir')
+                .setDescription('Ban un utilisateur')
                 .addUserOption(opt => opt.setName('user').setRequired(true))
                 .addStringOption(opt => opt.setName('raison'))
         )
 
         .addSubcommand(sub =>
             sub.setName('kick')
-                .setDescription('👢 Kick')
-                .addUserOption(opt => opt.setName('user').setRequired(true))
-        )
-
-        .addSubcommand(sub =>
-            sub.setName('mute')
-                .setDescription('🔇 Mute')
-                .addUserOption(opt => opt.setName('user').setRequired(true))
-        )
-
-        .addSubcommand(sub =>
-            sub.setName('unmute')
-                .setDescription('🔊 Unmute')
+                .setDescription('Kick un utilisateur')
                 .addUserOption(opt => opt.setName('user').setRequired(true))
         )
 
         .addSubcommand(sub =>
             sub.setName('blacklist')
-                .setDescription('🚫 Blacklist')
+                .setDescription('Blacklist')
                 .addUserOption(opt => opt.setName('user').setRequired(true))
         )
 
         .addSubcommand(sub =>
             sub.setName('unblacklist')
-                .setDescription('✅ Unblacklist')
+                .setDescription('Unblacklist')
                 .addUserOption(opt => opt.setName('user').setRequired(true))
         ),
 
@@ -60,90 +61,111 @@ module.exports = {
 
         const logChannel = interaction.guild.channels.cache.get(LOG_CHANNEL_ID);
 
-        const embed = new EmbedBuilder()
-            .setFooter({ text: `Modération • ${interaction.guild.name}` })
-            .setTimestamp();
+        if (!logChannel) {
+            return interaction.reply({ content: "❌ Log channel introuvable", ephemeral: true });
+        }
+
+        let color = '#2b2d31';
+        let title = '';
+        let icon = '';
 
         try {
 
-            let action = "";
+            // =====================
+            // ACTIONS
+            // =====================
 
-            // 🔨 BAN
-            if (sub === 'ban') {
-                await member.ban({ reason });
-                action = "BANNI";
-
-                embed.setColor('#ff0000').setTitle('🔨 Bannissement');
-            }
-
-            // 👢 KICK
-            if (sub === 'kick') {
-                await member.kick(reason);
-                action = "KICK";
-
-                embed.setColor('#ff8800').setTitle('👢 Expulsion');
-            }
-
-            // 🔇 MUTE
             if (sub === 'mute') {
                 const role = interaction.guild.roles.cache.get(config.muteRoleId);
                 await member.roles.add(role);
-                action = "MUTE";
-
-                embed.setColor('#5865F2').setTitle('🔇 Mute');
+                color = '#5865F2';
+                title = 'Mute';
+                icon = '🔇';
             }
 
-            // 🔊 UNMUTE
             if (sub === 'unmute') {
                 const role = interaction.guild.roles.cache.get(config.muteRoleId);
                 await member.roles.remove(role);
-                action = "UNMUTE";
-
-                embed.setColor('#57F287').setTitle('🔊 Unmute');
+                color = '#57F287';
+                title = 'Unmute';
+                icon = '🔊';
             }
 
-            // 🚫 BLACKLIST
+            if (sub === 'ban') {
+                await member.ban({ reason });
+                color = '#ED4245';
+                title = 'Ban';
+                icon = '🔨';
+            }
+
+            if (sub === 'kick') {
+                await member.kick(reason);
+                color = '#FEE75C';
+                title = 'Kick';
+                icon = '👢';
+            }
+
             if (sub === 'blacklist') {
                 const role = interaction.guild.roles.cache.get(config.blacklistRoleId);
                 await member.roles.add(role);
-                action = "BLACKLIST";
-
-                embed.setColor('#000000').setTitle('🚫 Blacklist');
+                color = '#000000';
+                title = 'Blacklist';
+                icon = '🚫';
             }
 
-            // ✅ UNBLACKLIST
             if (sub === 'unblacklist') {
                 const role = interaction.guild.roles.cache.get(config.blacklistRoleId);
                 await member.roles.remove(role);
-                action = "UNBLACKLIST";
-
-                embed.setColor('#00ffcc').setTitle('✅ Unblacklist');
+                color = '#00ffcc';
+                title = 'Unblacklist';
+                icon = '✅';
             }
 
-            // 📌 EMBED USER
-            embed.setDescription(`**${user.tag}**`)
+            // =====================
+            // EMBED STYLE PRO
+            // =====================
+
+            const embed = new EmbedBuilder()
+                .setColor(color)
+                .setAuthor({
+                    name: `${icon} ${title}`,
+                    iconURL: interaction.guild.iconURL()
+                })
+                .setDescription(`**${user.username}** a été ${title.toLowerCase()}`)
                 .addFields(
-                    { name: "👤 Utilisateur", value: `<@${user.id}>`, inline: true },
-                    { name: "📄 Raison", value: reason, inline: true },
-                    { name: "👮 Staff", value: `<@${interaction.user.id}>`, inline: true }
-                );
+                    {
+                        name: "👤 Utilisateur",
+                        value: `<@${user.id}>`,
+                        inline: true
+                    },
+                    {
+                        name: "📄 Raison",
+                        value: reason,
+                        inline: true
+                    },
+                    {
+                        name: "👮 Staff",
+                        value: `<@${interaction.user.id}>`,
+                        inline: true
+                    }
+                )
+                .setFooter({
+                    text: `Modération • ${interaction.guild.name}`
+                })
+                .setTimestamp();
 
-            await interaction.reply({ embeds: [embed] });
+            // 📤 LOG UNIQUEMENT
+            await logChannel.send({ embeds: [embed] });
 
-            // 📊 LOG EMBED (PLUS DÉTAILLÉ)
-            if (logChannel) {
-                const logEmbed = new EmbedBuilder()
-                    .setColor('#2b2d31')
-                    .setTitle(`📊 LOG • ${action}`)
-                    .addFields(
-                        { name: "👤 Utilisateur", value: `${user.tag} (${user.id})` },
-                        { name: "👮 Staff", value: `${interaction.user.tag}` },
-                        { name: "📄 Raison", value: reason }
-                    )
-                    .setTimestamp();
+            // 👻 MESSAGE TEMPORAIRE
+            const reply = await interaction.reply({
+                content: `✅ ${title} effectué`,
+                ephemeral: true
+            });
 
-                logChannel.send({ embeds: [logEmbed] });
-            }
+            setTimeout(() => {
+                interaction.deleteReply().catch(() => {});
+            }, 4000);
 
         } catch (err) {
             console.error(err);
