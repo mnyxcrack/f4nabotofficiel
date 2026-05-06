@@ -1,19 +1,9 @@
 const config = require('../../config.json');
-const mongoose = require("mongoose");
-
-// ===== DB =====
-const User = mongoose.models.User || mongoose.model("User", new mongoose.Schema({
-    userId: String,
-    guildId: String,
-    blacklist: { type: Boolean, default: false }
-}));
 
 const spamMap = new Map();
 const userInfractions = new Map();
 
-//
 // 🔒 MUTE
-//
 async function applyMute(member) {
     const role = member.guild.roles.cache.get(config.muteRoleId);
     if (!role) return;
@@ -23,9 +13,7 @@ async function applyMute(member) {
     }
 }
 
-//
 // 🧹 SUPPRIMER SPAM
-//
 async function deleteRecentMessages(channel, member) {
     const messages = await channel.messages.fetch({ limit: 15 });
     const userMessages = messages.filter(m => m.author.id === member.id);
@@ -35,73 +23,51 @@ async function deleteRecentMessages(channel, member) {
     }
 }
 
-//
 // ⚖️ SANCTIONS
-//
 async function handleSanction(member, logChannel, reason) {
-
     let infractions = userInfractions.get(member.id) || 0;
     infractions++;
     userInfractions.set(member.id, infractions);
 
-    // 📩 MP
+    // 📩 MESSAGE PRIVÉ
     await member.send({
         embeds: [{
             color: 0xff0000,
             title: "⚠️ Avertissement",
-            description:
-                `Raison : **${reason}**\n` +
-                `Infractions : **${infractions}/7**`
+            description: `Raison : **${reason}**
+Infractions : **${infractions}/3**
+
+Merci de respecter le serveur.`
         }]
     }).catch(() => {});
 
-    // 🔇 MUTE
+    // 🔇 MUTE au 3ème
     if (infractions === 3) {
         await applyMute(member);
 
         await member.send({
             embeds: [{
                 color: 0xff0000,
-                title: "🔇 Mute",
-                description: "Tu as été mute."
+                title: "🔇 Sanction",
+                description: "Tu as été **mute** suite à plusieurs infractions."
             }]
         }).catch(() => {});
     }
 
-    // 👢 KICK
-    if (infractions === 5) {
+    // 🚫 KICK à partir de 5
+    if (infractions >= 5) {
         await member.kick("Trop d'infractions").catch(() => {});
-    }
-
-    // 🚫 BLACKLIST
-    if (infractions >= 7) {
-        let data = await User.findOne({
-            userId: member.id,
-            guildId: member.guild.id
-        });
-
-        if (!data) {
-            data = new User({
-                userId: member.id,
-                guildId: member.guild.id
-            });
-        }
-
-        data.blacklist = true;
-        await data.save();
-
-        await member.send("🚫 Tu es blacklist du serveur").catch(() => {});
     }
 
     // 📊 LOG
     logChannel?.send({
         embeds: [{
             color: 0xff0000,
-            title: "🛡️ Protection",
+            title: "📊 LOG • Protection",
             fields: [
-                { name: "👤 Utilisateur", value: member.user.tag, inline: true },
-                { name: "📌 Raison", value: reason, inline: true },
-                { name: "⚠️ Infractions", value: `${infractions}/7`, inline: true }
+                { name: "Utilisateur", value: `${member.user.tag}`, inline: true },
+                { name: "Raison", value: reason, inline: true },
+                { name: "Infractions", value: `${infractions}`, inline: true }
             ],
             timestamp: new Date()
         }]
@@ -112,27 +78,15 @@ module.exports = {
     name: 'messageCreate',
 
     async execute(message) {
-
         if (message.author.bot || !message.guild) return;
 
         const member = await message.guild.members.fetch(message.author.id);
-        const logChannel = message.guild.channels.cache.get(config.logChannelId);
 
-        // 🚫 BLACKLIST BLOCK
-        const userData = await User.findOne({
-            userId: message.author.id,
-            guildId: message.guild.id
-        });
-
-        if (userData?.blacklist) {
-            await message.delete().catch(() => {});
-            return;
-        }
-
-        // 🚫 BYPASS STAFF
         if (member.roles.cache.has(config.roleBypass)) return;
 
-        // 🔇 MUTE BLOCK
+        const logChannel = message.guild.channels.cache.get(config.logChannelId);
+
+        // 🔒 BLOQUE SI MUTE
         if (member.roles.cache.has(config.muteRoleId)) {
             await message.delete().catch(() => {});
             return;
@@ -143,26 +97,27 @@ module.exports = {
         // 🔗 LIENS
         if (/(https?:\/\/|discord\.gg)/gi.test(content)) {
             await message.delete().catch(() => {});
-            return handleSanction(member, logChannel, "Lien interdit");
+            await handleSanction(member, logChannel, "Lien interdit");
+            return;
         }
 
         // @everyone
         if (message.mentions.everyone) {
             await message.delete().catch(() => {});
-            return handleSanction(member, logChannel, "@everyone");
+            await handleSanction(member, logChannel, "@everyone");
+            return;
         }
 
         // CAPS
-        const isCaps =
-            message.content.length > 15 &&
-            message.content === message.content.toUpperCase();
+        const isCaps = message.content.length > 15 && message.content === message.content.toUpperCase();
 
         if (isCaps) {
             await message.delete().catch(() => {});
-            return handleSanction(member, logChannel, "Majuscules abusives");
+            await handleSanction(member, logChannel, "Majuscules abusives");
+            return;
         }
 
-        // 💬 SPAM
+        // 💬 ANTI SPAM
         const now = Date.now();
 
         if (!spamMap.has(member.id)) {
@@ -174,23 +129,25 @@ module.exports = {
         } else {
             const data = spamMap.get(member.id);
 
-            // répétitif
+            // Spam répétitif
             if (data.lastMessage === content) {
                 data.count++;
 
                 if (data.count >= 4) {
                     await message.delete().catch(() => {});
-                    return handleSanction(member, logChannel, "Spam répétitif");
+                    await handleSanction(member, logChannel, "Spam répétitif");
+                    return;
                 }
             }
 
-            // rapide
+            // Spam rapide
             if (now - data.lastTime < 3000) {
                 data.count++;
 
                 if (data.count >= 6) {
                     await deleteRecentMessages(message.channel, member);
-                    return handleSanction(member, logChannel, "Spam rapide");
+                    await handleSanction(member, logChannel, "Spam rapide");
+                    return;
                 }
             } else {
                 data.count = 1;
