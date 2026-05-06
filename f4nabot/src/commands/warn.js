@@ -9,18 +9,21 @@ const path = require('path');
 
 const dataPath = path.join(__dirname, '../../data/warns.json');
 
-// ✅ LOAD SAFE
+// CREATE FILE SI EXISTE PAS
+if (!fs.existsSync(dataPath)) {
+    fs.writeFileSync(dataPath, "{}");
+}
+
+// LOAD SAFE
 function loadData() {
     try {
-        if (!fs.existsSync(dataPath)) return {};
-        const raw = fs.readFileSync(dataPath, 'utf8');
-        return raw ? JSON.parse(raw) : {};
+        return JSON.parse(fs.readFileSync(dataPath, 'utf8'));
     } catch {
         return {};
     }
 }
 
-// ✅ SAVE
+// SAVE
 function saveData(data) {
     fs.writeFileSync(dataPath, JSON.stringify(data, null, 2));
 }
@@ -31,30 +34,41 @@ module.exports = {
         .setDescription('Système d’avertissement')
         .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers)
 
+        // ADD
         .addSubcommand(sub =>
             sub.setName('add')
                 .setDescription('Ajouter un avertissement')
                 .addUserOption(opt =>
-                    opt.setName('user').setRequired(true)
+                    opt.setName('user')
+                        .setDescription('Utilisateur')
+                        .setRequired(true)
                 )
                 .addStringOption(opt =>
-                    opt.setName('raison').setRequired(true)
+                    opt.setName('raison')
+                        .setDescription('Raison')
+                        .setRequired(true)
                 )
         )
 
+        // LIST
         .addSubcommand(sub =>
             sub.setName('list')
                 .setDescription('Voir les avertissements')
                 .addUserOption(opt =>
-                    opt.setName('user').setRequired(true)
+                    opt.setName('user')
+                        .setDescription('Utilisateur')
+                        .setRequired(true)
                 )
         )
 
+        // CLEAR
         .addSubcommand(sub =>
             sub.setName('clear')
                 .setDescription('Supprimer les avertissements')
                 .addUserOption(opt =>
-                    opt.setName('user').setRequired(true)
+                    opt.setName('user')
+                        .setDescription('Utilisateur')
+                        .setRequired(true)
                 )
         ),
 
@@ -65,16 +79,13 @@ module.exports = {
         const reason = interaction.options.getString('raison');
 
         let data = loadData();
-
         if (!data[user.id]) data[user.id] = [];
 
-        // =====================
-        // ADD WARN
-        // =====================
+        // ADD
         if (sub === "add") {
 
             const warn = {
-                reason: reason,
+                reason,
                 staff: interaction.user.tag,
                 date: new Date().toLocaleString()
             };
@@ -84,27 +95,22 @@ module.exports = {
 
             const embed = new EmbedBuilder()
                 .setColor('#ED4245')
-                .setAuthor({
-                    name: "⚠️ Avertissement",
-                    iconURL: interaction.guild.iconURL()
-                })
-                .setDescription(`> **${user.tag}** a reçu un avertissement`)
+                .setTitle('⚠️ Avertissement')
+                .setDescription(`> ${user.tag} a reçu un avertissement`)
                 .addFields(
                     { name: "📄 Raison", value: reason },
                     { name: "👮 Staff", value: interaction.user.tag },
-                    { name: "📊 Total", value: `${data[user.id].length} warn(s)` }
+                    { name: "📊 Total", value: `${data[user.id].length}` }
                 )
                 .setTimestamp();
 
-            await interaction.reply({ embeds: [embed] });
+            return interaction.reply({ embeds: [embed] });
         }
 
-        // =====================
-        // LIST WARN
-        // =====================
+        // LIST
         if (sub === "list") {
 
-            if (!data[user.id] || data[user.id].length === 0) {
+            if (!data[user.id].length) {
                 return interaction.reply({
                     content: "✅ Aucun avertissement",
                     ephemeral: true
@@ -120,26 +126,21 @@ module.exports = {
             const embed = new EmbedBuilder()
                 .setColor('#5865F2')
                 .setTitle(`📊 Warns de ${user.tag}`)
-                .setDescription(list)
-                .setFooter({
-                    text: `${data[user.id].length} avertissement(s)`
-                });
+                .setDescription(list);
 
-            await interaction.reply({
+            return interaction.reply({
                 embeds: [embed],
                 ephemeral: true
             });
         }
 
-        // =====================
-        // CLEAR WARN
-        // =====================
+        // CLEAR
         if (sub === "clear") {
 
             data[user.id] = [];
             saveData(data);
 
-            await interaction.reply({
+            return interaction.reply({
                 content: `🧹 Warns supprimés pour ${user.tag}`,
                 ephemeral: true
             });
