@@ -5,16 +5,15 @@ module.exports = {
 
     async execute(message) {
 
-        if (message.author.bot || !message.guild) return;
+        if (!message.guild || message.author.bot) return;
 
         const member = message.member;
+        if (!member) return;
 
-        // 🚫 BLACKLIST HARD
+        // 🚫 BLOQUE SI BLACKLIST
         if (member.roles.cache.has(config.blacklistRoleId)) {
 
             await message.delete().catch(() => {});
-
-            await member.send("🚫 Tu es blacklist du serveur.").catch(() => {});
 
             return;
         }
