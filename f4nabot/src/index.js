@@ -6,7 +6,7 @@ const path = require('path');
 const ora = require('ora').default;
 
 // ==========================
-// ⚙️ CONFIG HYBRIDE (RAILWAY + LOCAL)
+// ⚙️ CONFIG
 // ==========================
 const config = {
     token: process.env.TOKEN || localConfig.token,
@@ -16,7 +16,7 @@ const config = {
 };
 
 // ==========================
-// 🧠 CLIENT DISCORD
+// 🧠 CLIENT
 // ==========================
 const client = new Client({
     intents: [
@@ -31,24 +31,39 @@ client.commands = new Map();
 
 //
 // ==========================
-// 📦 CHARGEMENT COMMANDES
+// 📦 LOAD COMMANDS (SAFE)
 // ==========================
 //
 const commandsPath = path.join(__dirname, 'commands');
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-for (const file of commandFiles) {
-    const command = require(`./commands/${file}`);
-    client.commands.set(command.data.name, command);
+if (fs.existsSync(commandsPath)) {
+    const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+    for (const file of commandFiles) {
+        try {
+            const command = require(`./commands/${file}`);
+
+            // 🔒 sécurité anti crash
+            if (!command.data || !command.execute) {
+                console.log(`❌ Commande invalide ignorée: ${file}`);
+                continue;
+            }
+
+            client.commands.set(command.data.name, command);
+            console.log(`✅ Commande chargée: ${command.data.name}`);
+
+        } catch (err) {
+            console.log(`💥 Erreur chargement ${file}:`, err);
+        }
+    }
 }
 
 logger.success(`${client.commands.size} commandes chargées`);
 
 //
 // ==========================
-// 📡 ENREGISTREMENT COMMANDES (INSTANT)
+// 📡 REGISTER COMMANDS
 // ==========================
-//
 const rest = new REST({ version: '10' }).setToken(config.token);
 
 (async () => {
@@ -71,19 +86,33 @@ const rest = new REST({ version: '10' }).setToken(config.token);
 
 //
 // ==========================
-// ⚡ CHARGEMENT EVENTS
+// ⚡ LOAD EVENTS
 // ==========================
-//
 const eventsPath = path.join(__dirname, 'events');
-const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
-for (const file of eventFiles) {
-    const event = require(`./events/${file}`);
+if (fs.existsSync(eventsPath)) {
+    const eventFiles = fs.readdirSync(eventsPath).filter(file => file.endsWith('.js'));
 
-    if (event.once) {
-        client.once(event.name, (...args) => event.execute(...args, client));
-    } else {
-        client.on(event.name, (...args) => event.execute(...args, client));
+    for (const file of eventFiles) {
+        try {
+            const event = require(`./events/${file}`);
+
+            if (!event.name || !event.execute) {
+                console.log(`❌ Event invalide: ${file}`);
+                continue;
+            }
+
+            if (event.once) {
+                client.once(event.name, (...args) => event.execute(...args, client));
+            } else {
+                client.on(event.name, (...args) => event.execute(...args, client));
+            }
+
+            console.log(`📡 Event chargé: ${event.name}`);
+
+        } catch (err) {
+            console.log(`💥 Erreur event ${file}:`, err);
+        }
     }
 }
 
@@ -91,17 +120,16 @@ for (const file of eventFiles) {
 // ==========================
 // 🎯 INTERACTIONS
 // ==========================
-//
 client.on('interactionCreate', async interaction => {
 
     // ==========================
-    // 🧾 MODAL ANNONCE
+    // 🧾 MODAL
     // ==========================
     if (interaction.isModalSubmit()) {
 
         if (interaction.customId === 'annonceModal') {
 
-            await interaction.deferReply(); // ⏳ animation chargement
+            await interaction.deferReply();
 
             const titre = interaction.fields.getTextInputValue('titre');
             const sousTitre = interaction.fields.getTextInputValue('sousTitre');
@@ -118,21 +146,18 @@ client.on('interactionCreate', async interaction => {
                 })
                 .setTimestamp();
 
-            // ✅ mini affiche (thumbnail)
             if (image && image.startsWith("http")) {
                 embed.setThumbnail(image);
             }
 
-            await interaction.editReply({
-                embeds: [embed]
-            });
+            await interaction.editReply({ embeds: [embed] });
         }
 
         return;
     }
 
     // ==========================
-    // 🎯 COMMANDES SLASH
+    // 🎯 COMMANDES
     // ==========================
     if (!interaction.isChatInputCommand()) return;
 
@@ -141,7 +166,6 @@ client.on('interactionCreate', async interaction => {
 
     const member = interaction.member;
 
-    // 🔐 Vérification rôle
     if (command.permission) {
         if (!member.roles.cache.has(config.roleId)) {
             return interaction.reply({
@@ -167,7 +191,7 @@ client.on('interactionCreate', async interaction => {
 
 //
 // ==========================
-// 🚨 ERREURS GLOBALES
+// 🚨 ERREURS
 // ==========================
 process.on('unhandledRejection', err => {
     logger.error(`UnhandledRejection: ${err}`);
@@ -179,6 +203,6 @@ process.on('uncaughtException', err => {
 
 //
 // ==========================
-// 🔌 CONNEXION
+// 🔌 LOGIN
 // ==========================
 client.login(config.token);
