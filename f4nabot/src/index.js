@@ -33,7 +33,6 @@ client.commands = new Map();
 // ==========================
 // 📦 LOAD COMMANDS (SAFE)
 // ==========================
-//
 const commandsPath = path.join(__dirname, 'commands');
 
 if (fs.existsSync(commandsPath)) {
@@ -43,7 +42,6 @@ if (fs.existsSync(commandsPath)) {
         try {
             const command = require(`./commands/${file}`);
 
-            // 🔒 sécurité anti crash
             if (!command.data || !command.execute) {
                 console.log(`❌ Commande invalide ignorée: ${file}`);
                 continue;
@@ -62,7 +60,7 @@ logger.success(`${client.commands.size} commandes chargées`);
 
 //
 // ==========================
-// 📡 REGISTER COMMANDS
+// 📡 REGISTER COMMANDS (FIX + RESET)
 // ==========================
 const rest = new REST({ version: '10' }).setToken(config.token);
 
@@ -72,15 +70,26 @@ const rest = new REST({ version: '10' }).setToken(config.token);
     try {
         const commands = [...client.commands.values()].map(cmd => cmd.data.toJSON());
 
+        // 🔍 DEBUG
+        console.log("📦 Commandes détectées :", commands.map(c => c.name));
+
+        // 🧹 RESET TOTAL (corrige 99% des bugs)
+        await rest.put(
+            Routes.applicationGuildCommands(config.clientId, config.guildId),
+            { body: [] }
+        );
+
+        // 📡 RELOAD
         await rest.put(
             Routes.applicationGuildCommands(config.clientId, config.guildId),
             { body: commands }
         );
 
         spinner.succeed('Commandes chargées !');
+
     } catch (err) {
         spinner.fail('Erreur chargement commandes');
-        logger.error(err);
+        console.error(err);
     }
 })();
 
@@ -122,9 +131,6 @@ if (fs.existsSync(eventsPath)) {
 // ==========================
 client.on('interactionCreate', async interaction => {
 
-    // ==========================
-    // 🧾 MODAL
-    // ==========================
     if (interaction.isModalSubmit()) {
 
         if (interaction.customId === 'annonceModal') {
@@ -156,9 +162,6 @@ client.on('interactionCreate', async interaction => {
         return;
     }
 
-    // ==========================
-    // 🎯 COMMANDES
-    // ==========================
     if (!interaction.isChatInputCommand()) return;
 
     const command = client.commands.get(interaction.commandName);
@@ -178,7 +181,7 @@ client.on('interactionCreate', async interaction => {
     try {
         await command.execute(interaction);
     } catch (error) {
-        logger.error(error);
+        console.error(error);
 
         if (!interaction.replied) {
             interaction.reply({
@@ -191,15 +194,10 @@ client.on('interactionCreate', async interaction => {
 
 //
 // ==========================
-// 🚨 ERREURS
+// 🚨 ERREURS (ANTI CRASH)
 // ==========================
-process.on('unhandledRejection', err => {
-    logger.error(`UnhandledRejection: ${err}`);
-});
-
-process.on('uncaughtException', err => {
-    logger.error(`UncaughtException: ${err}`);
-});
+process.on('unhandledRejection', console.error);
+process.on('uncaughtException', console.error);
 
 //
 // ==========================
